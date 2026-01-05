@@ -43,8 +43,8 @@ export function AuthForm({ mode }: AuthFormProps) {
           password,
         })
         if (error) throw error
-        router.push('/dashboard')
         router.refresh()
+        router.push('/dashboard')
       }
     } catch (err: any) {
       setError(err.message)

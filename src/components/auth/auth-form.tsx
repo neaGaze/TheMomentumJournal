@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
+import { ForgotPasswordForm } from './forgot-password-form'
 
 interface AuthFormProps {
   mode: 'login' | 'signup'
@@ -14,6 +15,7 @@ export function AuthForm({ mode }: AuthFormProps) {
   const [fullName, setFullName] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [showForgotPassword, setShowForgotPassword] = useState(false)
   const router = useRouter()
   const supabase = createClient()
 
@@ -51,6 +53,10 @@ export function AuthForm({ mode }: AuthFormProps) {
     } finally {
       setLoading(false)
     }
+  }
+
+  if (showForgotPassword && mode === 'login') {
+    return <ForgotPasswordForm onBack={() => setShowForgotPassword(false)} />
   }
 
   return (
@@ -104,6 +110,15 @@ export function AuthForm({ mode }: AuthFormProps) {
           minLength={6}
           className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
         />
+        {mode === 'login' && (
+          <button
+            type="button"
+            onClick={() => setShowForgotPassword(true)}
+            className="text-sm text-blue-600 hover:underline mt-2"
+          >
+            Forgot password?
+          </button>
+        )}
       </div>
 
       <button

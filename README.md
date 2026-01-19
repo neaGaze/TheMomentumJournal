@@ -2,6 +2,12 @@
 
 Goal tracking + journaling app with AI-powered insights using Claude.
 
+## Features
+- The app lets you set the goals on a yearly basis, monthly basis and weekly basis. 
+- It should facilitate tracking of these goals by journaling. It can detect the sentiment of the journal and say whether you met the goals for the timeline or not.
+- There should be a dashboard where it shows how you're making progress in your goals. It should show the statistics based on the timeline you choose (weekly, monthly, yearly). 
+- There should be voice to text translation for both goal setting and journaling
+
 ## Tech Stack
 
 - **Frontend:** Next.js 14 (App Router) + TypeScript + Tailwind CSS
@@ -128,9 +134,9 @@ src/
 - [x] Deployment config
 
 ### Phase 2: Auth
-- [ ] Supabase Auth integration
-- [ ] Login/Signup pages
-- [ ] Protected routes
+- [x] Supabase Auth integration
+- [x] Login/Signup pages
+- [x] Protected routes
 
 ### Phase 3: Goals CRUD
 - [ ] Create/edit/delete goals

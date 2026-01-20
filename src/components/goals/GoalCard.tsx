@@ -4,12 +4,14 @@ import { useState } from 'react'
 import type { Goal, GoalStatus, GoalType } from '@/types'
 import { GOAL_STATUS_LABELS, GOAL_TYPE_LABELS } from '@/types'
 import { ProgressIndicator } from './ProgressIndicator'
+import { AnalyzeButton } from '@/components/ai/AnalyzeButton'
 import { format } from 'date-fns'
 
 interface GoalCardProps {
   goal: Goal
   onEdit?: (goal: Goal) => void
   onDelete?: (goal: Goal) => void
+  showAnalyze?: boolean
 }
 
 const statusColors: Record<GoalStatus, string> = {
@@ -24,7 +26,7 @@ const typeColors: Record<GoalType, string> = {
   'short-term': 'bg-orange-100 text-orange-700',
 }
 
-export function GoalCard({ goal, onEdit, onDelete }: GoalCardProps) {
+export function GoalCard({ goal, onEdit, onDelete, showAnalyze = true }: GoalCardProps) {
   const [expanded, setExpanded] = useState(false)
 
   const formatDate = (date: Date | null) => {
@@ -143,6 +145,11 @@ export function GoalCard({ goal, onEdit, onDelete }: GoalCardProps) {
           </div>
 
           <div className="flex gap-2 pt-2 border-t border-gray-100">
+            {showAnalyze && (
+              <div onClick={(e) => e.stopPropagation()}>
+                <AnalyzeButton type="goal" id={goal.id} variant="default" />
+              </div>
+            )}
             {onEdit && (
               <button
                 onClick={(e) => {

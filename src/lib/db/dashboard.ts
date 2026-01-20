@@ -373,7 +373,7 @@ export async function getGoalsProgressOverTime(
     .from('goals')
     .select('id, status, progress_percentage, created_at, updated_at')
     .eq('user_id', userId)
-    .or(`created_at.gte.${startDate},updated_at.gte.${startDate}`);
+    .gte('created_at', startDate);
 
   if (goalsError) {
     throw new Error(`Failed to fetch goals progress: ${goalsError.message}`);
@@ -410,6 +410,9 @@ export async function getGoalsProgressOverTime(
       break;
     case 'year':
       interval = 'month';
+      break;
+    default:
+      interval = 'day';
       break;
   }
 

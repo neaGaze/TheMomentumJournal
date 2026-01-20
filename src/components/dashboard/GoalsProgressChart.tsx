@@ -108,8 +108,8 @@ export function GoalsProgressChart({ data, timeline, loading = false }: GoalsPro
             </div>
 
             {chartData.map((point, index) => {
-              const progressHeight = Math.max((point.avgProgress / 100) * 100, 0)
-              const completedHeight = Math.max(((point.completedGoals / Math.max(maxValue / 10, 1)) * 100), 0)
+              const progressHeight = Math.min(100, Math.max((point.avgProgress / 100) * 100, 0))
+              const completedHeight = Math.min(100, Math.max(((point.completedGoals / Math.max(maxValue / 10, 1)) * 100), 0))
 
               return (
                 <div key={index} className="flex-1 flex flex-col items-center justify-end gap-1 group relative z-10">

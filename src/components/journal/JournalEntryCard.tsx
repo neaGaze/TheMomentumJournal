@@ -6,12 +6,14 @@ import { format } from 'date-fns'
 import type { JournalEntry, Goal, Mood } from '@/types'
 import { MoodBadge } from './MoodSelector'
 import { LinkedGoalsDisplay } from './GoalTagging'
+import { AnalyzeButton } from '@/components/ai/AnalyzeButton'
 
 interface JournalEntryCardProps {
   entry: JournalEntry
   linkedGoals?: Goal[]
   onEdit?: (entry: JournalEntry) => void
   onDelete?: (entry: JournalEntry) => void
+  showAnalyze?: boolean
 }
 
 export function JournalEntryCard({
@@ -19,6 +21,7 @@ export function JournalEntryCard({
   linkedGoals = [],
   onEdit,
   onDelete,
+  showAnalyze = true,
 }: JournalEntryCardProps) {
   const [expanded, setExpanded] = useState(false)
 
@@ -150,6 +153,11 @@ export function JournalEntryCard({
 
           {/* Actions */}
           <div className="flex gap-2 pt-2 border-t border-gray-100">
+            {showAnalyze && (
+              <div onClick={(e) => e.stopPropagation()}>
+                <AnalyzeButton type="journal" id={entry.id} variant="default" />
+              </div>
+            )}
             {onEdit && (
               <button
                 onClick={(e) => {

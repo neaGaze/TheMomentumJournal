@@ -156,7 +156,7 @@ export function EditJournalModal({
               id="edit-title"
               type="text"
               {...register('title')}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white text-gray-900 placeholder:text-gray-500"
               placeholder="Optional title for your entry"
             />
             {errors.title && (
@@ -176,7 +176,7 @@ export function EditJournalModal({
               id="edit-entryDate"
               type="date"
               {...register('entryDate')}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white text-gray-900"
             />
           </div>
 
@@ -230,7 +230,7 @@ export function EditJournalModal({
                 id="edit-content"
                 rows={8}
                 {...register('content')}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none font-mono text-sm"
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none font-mono text-sm bg-white text-gray-900 placeholder:text-gray-500"
                 placeholder="Write your journal entry... (Markdown supported)"
               />
             )}

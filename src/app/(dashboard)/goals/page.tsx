@@ -202,7 +202,7 @@ export default function GoalsPage() {
                 value={search}
                 onChange={handleSearch}
                 placeholder="Search goals..."
-                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white text-gray-900 placeholder:text-gray-500"
               />
             </div>
           </div>
@@ -213,7 +213,7 @@ export default function GoalsPage() {
             <select
               value={typeFilter}
               onChange={(e) => setTypeFilter(e.target.value as GoalType | '')}
-              className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white text-sm"
+              className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white text-gray-900 text-sm"
             >
               <option value="">All Types</option>
               {GOAL_TYPES.map((type) => (
@@ -227,7 +227,7 @@ export default function GoalsPage() {
             <select
               value={statusFilter}
               onChange={(e) => setStatusFilter(e.target.value as GoalStatus | '')}
-              className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white text-sm"
+              className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white text-gray-900 text-sm"
             >
               <option value="">All Statuses</option>
               {GOAL_STATUSES.map((status) => (
@@ -242,7 +242,7 @@ export default function GoalsPage() {
               <select
                 value={categoryFilter}
                 onChange={(e) => setCategoryFilter(e.target.value)}
-                className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white text-sm"
+                className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white text-gray-900 text-sm"
               >
                 <option value="">All Categories</option>
                 {categories.map((cat) => (
@@ -264,7 +264,7 @@ export default function GoalsPage() {
                 setSortField(field)
                 setSortDir(dir)
               }}
-              className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white text-sm"
+              className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white text-gray-900 text-sm"
             >
               <option value="created_at-desc">Newest First</option>
               <option value="created_at-asc">Oldest First</option>

@@ -136,7 +136,7 @@ export function GoalTagging({ selectedGoalIds, onChange, disabled }: GoalTagging
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Search goals..."
-              className="w-full px-3 py-1.5 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500"
+              className="w-full px-3 py-1.5 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500 bg-white text-gray-900 placeholder:text-gray-500"
             />
           </div>
 

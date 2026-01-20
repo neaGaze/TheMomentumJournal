@@ -198,7 +198,7 @@ export default function JournalPage() {
                   value={search}
                   onChange={handleSearch}
                   placeholder="Search entries..."
-                  className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white text-gray-900 placeholder:text-gray-500"
                 />
               </div>
             </div>
@@ -214,7 +214,7 @@ export default function JournalPage() {
                 setSortField(field)
                 setSortDir(dir)
               }}
-              className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white text-sm"
+              className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white text-gray-900 text-sm"
             >
               <option value="entry_date-desc">Newest First</option>
               <option value="entry_date-asc">Oldest First</option>
@@ -231,7 +231,7 @@ export default function JournalPage() {
             <select
               value={moodFilter}
               onChange={(e) => setMoodFilter(e.target.value as Mood | '')}
-              className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white text-sm"
+              className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white text-gray-900 text-sm"
             >
               <option value="">All Moods</option>
               {MOODS.map((mood) => (
@@ -246,7 +246,7 @@ export default function JournalPage() {
               <select
                 value={goalFilter}
                 onChange={(e) => setGoalFilter(e.target.value)}
-                className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white text-sm max-w-[200px]"
+                className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white text-gray-900 text-sm max-w-[200px]"
               >
                 <option value="">All Goals</option>
                 {goals.map((goal) => (
@@ -263,7 +263,7 @@ export default function JournalPage() {
                 type="date"
                 value={dateFrom}
                 onChange={(e) => setDateFrom(e.target.value)}
-                className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white text-sm"
+                className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white text-gray-900 text-sm"
                 placeholder="From"
               />
               <span className="text-gray-400">to</span>
@@ -271,7 +271,7 @@ export default function JournalPage() {
                 type="date"
                 value={dateTo}
                 onChange={(e) => setDateTo(e.target.value)}
-                className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white text-sm"
+                className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white text-gray-900 text-sm"
                 placeholder="To"
               />
             </div>

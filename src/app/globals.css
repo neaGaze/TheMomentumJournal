@@ -26,6 +26,31 @@ body {
   }
 }
 
+/* Base input styles for better readability */
+@layer base {
+  input,
+  textarea,
+  select {
+    color: #111827; /* text-gray-900 */
+    background-color: #ffffff;
+  }
+
+  input::placeholder,
+  textarea::placeholder {
+    color: #6b7280; /* text-gray-500 */
+  }
+
+  /* Fix date input text color on webkit browsers */
+  input[type="date"]::-webkit-datetime-edit,
+  input[type="date"]::-webkit-datetime-edit-fields-wrapper,
+  input[type="date"]::-webkit-datetime-edit-text,
+  input[type="date"]::-webkit-datetime-edit-month-field,
+  input[type="date"]::-webkit-datetime-edit-day-field,
+  input[type="date"]::-webkit-datetime-edit-year-field {
+    color: #111827;
+  }
+}
+
 @keyframes slide-in {
   from {
     transform: translateX(100%);

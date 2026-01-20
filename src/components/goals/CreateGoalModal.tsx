@@ -136,7 +136,7 @@ export function CreateGoalModal({
               id="title"
               type="text"
               {...register('title')}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white text-gray-900 placeholder:text-gray-500"
               placeholder="e.g., Learn Spanish"
             />
             {errors.title && (
@@ -155,7 +155,7 @@ export function CreateGoalModal({
               id="description"
               rows={3}
               {...register('description')}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none bg-white text-gray-900 placeholder:text-gray-500"
               placeholder="Describe your goal..."
             />
             {errors.description && (
@@ -176,7 +176,7 @@ export function CreateGoalModal({
               <select
                 id="type"
                 {...register('type')}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white"
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white text-gray-900"
               >
                 {GOAL_TYPES.map((type) => (
                   <option key={type} value={type}>
@@ -200,7 +200,7 @@ export function CreateGoalModal({
                 id="category"
                 type="text"
                 {...register('category')}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white text-gray-900 placeholder:text-gray-500"
                 placeholder="e.g., Health, Career"
               />
               {errors.category && (
@@ -222,7 +222,7 @@ export function CreateGoalModal({
               id="targetDate"
               type="date"
               {...register('targetDate')}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white text-gray-900"
             />
             {errors.targetDate && (
               <p className="mt-1 text-sm text-red-600">

@@ -161,7 +161,7 @@ export function EditGoalModal({
               id="edit-title"
               type="text"
               {...register('title')}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white text-gray-900 placeholder:text-gray-500"
             />
             {errors.title && (
               <p className="mt-1 text-sm text-red-600">{errors.title.message}</p>
@@ -179,7 +179,7 @@ export function EditGoalModal({
               id="edit-description"
               rows={3}
               {...register('description')}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none bg-white text-gray-900 placeholder:text-gray-500"
             />
             {errors.description && (
               <p className="mt-1 text-sm text-red-600">
@@ -199,7 +199,7 @@ export function EditGoalModal({
               <select
                 id="edit-type"
                 {...register('type')}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white"
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white text-gray-900"
               >
                 {GOAL_TYPES.map((type) => (
                   <option key={type} value={type}>
@@ -219,7 +219,7 @@ export function EditGoalModal({
               <select
                 id="edit-status"
                 {...register('status')}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white"
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white text-gray-900"
               >
                 {GOAL_STATUSES.map((status) => (
                   <option key={status} value={status}>
@@ -242,7 +242,7 @@ export function EditGoalModal({
                 id="edit-category"
                 type="text"
                 {...register('category')}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white text-gray-900 placeholder:text-gray-500"
               />
             </div>
 
@@ -257,7 +257,7 @@ export function EditGoalModal({
                 id="edit-targetDate"
                 type="date"
                 {...register('targetDate')}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white text-gray-900"
               />
             </div>
           </div>

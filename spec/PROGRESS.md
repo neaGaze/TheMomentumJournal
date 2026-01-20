@@ -136,11 +136,118 @@
 - [x] U5.6: Update dashboard page with real data
 
 ### QA Reviews
-- [ ] QA Round 1: After backend + UI implementation
-- [ ] QA Round 2: After fixes (if needed)
+- [x] QA Round 1: After backend + UI implementation
+  - Status: NEEDS_WORK - 2 critical issues found
+  - Build: PASS - npm run build succeeds, no errors
+  - Type Safety: PASS - All TypeScript types correct
+  - Security: PASS - Auth checks on all endpoints
+  - Error Handling: PASS - Consistent error responses
+  - Critical Issues:
+    1. [CRITICAL] Data Inconsistency in getGoalsProgressOverTime (line 376)
+       - Issue: Uses OR filter (created_at OR updated_at) while getGoalsStats uses AND pattern
+       - Impact: Stats cards and progress chart show different goal counts for same timeline
+       - Location: src/lib/db/dashboard.ts line 376
+       - Fix: Change .or() to .gte('created_at', startDate) to match getGoalsStats
+       - Severity: Breaks data consistency model
+    2. [CRITICAL] Chart Height Calculation Exceeds 100% (line 112)
+       - Issue: completedHeight can exceed 100% if completedGoals > maxValue/10
+       - Impact: Bars render beyond chart container, visual overflow
+       - Location: src/components/dashboard/GoalsProgressChart.tsx line 112
+       - Fix: Clamp result to 100% with Math.min(100, ...)
+       - Severity: Breaks UI at scale
+  - High Priority Issues:
+    1. [HIGH] Missing defensive check on avgProgress (line 111)
+       - No explicit clamping to 100 max, could overflow container
+       - Fix: Add Math.min(100, ...) to progressHeight calculation
+    2. [HIGH] Missing switch default case (line 403-414)
+       - Uninitialized interval variable if timeline doesn't match
+       - Fix: Add default case to switch statement
+  - Medium Issues:
+    1. [MEDIUM] Race condition in timeline change (page.tsx line 65-67)
+       - Rapid timeline switches cause stale data display
+       - Fix: Add AbortController to cancel previous requests
+    2. [MEDIUM] getRecentActivity fetches excess data (line 315-358)
+       - Fetches limit goals AND limit journals then slices
+       - Inefficient for large datasets, but not critical
+    3. [MEDIUM] Timezone-dependent date calculations
+       - Dates use UTC ISO format, potential off-by-one on timezone boundaries
+       - Low priority, edge case for international users
+  - Minor Issues:
+    1. [MINOR] Unused callback props in QuickActions (line 34-35)
+       - onCreateGoal and onWriteEntry props never used
+    2. [MINOR] Initial load shows 0 stats briefly
+       - Acceptable - loading state covers this
+  - Positive Findings:
+    * All API endpoints require auth checks (getUser validation present)
+    * Error response format consistent across both routes
+    * Full TypeScript type coverage
+    * Input validation on timeline (Zod) and limit (bounded 1-50)
+    * Proper loading/skeleton states on all components
+    * Toast error notifications properly integrated
+    * Responsive grid layout (1/2/4 columns for stats)
+    * Correct streak calculation logic (current/longest)
+    * No N+1 query patterns
+  - Estimated fix time: 1-2 hours for critical issues
+- [x] QA Round 2: After fixes
+  - Status: PASS - All fixes verified and working
+  - Data Inconsistency: FIXED - Line 376 now uses .gte('created_at', startDate), consistent with getGoalsStats
+  - Missing Default Case: FIXED - Lines 414-416 have proper default, interval always initialized
+  - Chart Height Clamping: FIXED - Lines 111-112 use Math.min(100, ...), all bars constrained to 0-100%
+  - Build: PASS - npm run build succeeds, no errors
+  - No new issues detected
+  - Phase 5 COMPLETE - Ready for Phase 6
+
+**Phase 5 Complete - Starting Phase 6: AI Analysis (Final Phase)**
 
 ## Phase 6: AI Analysis
-- Not started
+
+### Backend Tasks
+- [x] B6.1: Claude API integration lib
+- [x] B6.2: AI analysis API routes (on-demand, insights)
+- [x] B6.3: Analysis queries lib (fetch context for AI)
+- [x] B6.4: Store analysis results in ai_analyses table
+- [x] B6.5: Weekly insights generation
+
+### UI Tasks
+- [x] U6.1: Insights page/section
+- [x] U6.2: "Analyze Progress" button on goals
+- [x] U6.3: AI analysis display component
+- [x] U6.4: Recommendations list
+- [x] U6.5: Loading states for AI analysis
+- [x] U6.6: Insights timeline view
+
+### QA Reviews
+- [x] QA Round 1: After backend + UI implementation
+  - Status: NEEDS_WORK - 2 critical issues found
+  - Build: PASS - npm run build succeeds, no errors
+  - Critical Issues:
+    1. [CRITICAL] AnalyzeButton calls wrong endpoint (/api/ai/analyze doesn't exist)
+       - Should call /api/ai/analyze-goal or /api/ai/analyze-journal
+       - Impact: All analyze buttons fail with 404
+       - Fix: Add conditional routing in AnalyzeButton.tsx line 34
+    2. [CRITICAL] Insights page attempts POST on GET-only route
+       - /api/ai/insights only supports GET, no POST handler
+       - Impact: Generate Insights button fails with 405
+       - Fix: Add POST handler to insights route or create separate endpoint
+  - Medium Issues:
+    1. Wrong pagination parameter in insights page (limit vs pageSize)
+    2. Missing timeout on loading states
+    3. No retry mechanism on failed requests
+  - Code Quality: EXCELLENT - Backend clean, types correct, security solid
+  - Detailed report: See spec/QA_ROUND_1_PHASE_6.md
+- [x] QA Round 2: After critical fixes
+  - Status: PASS - All fixes verified and working
+  - Build: PASS - npm run build succeeds, all routes registered
+  - AnalyzeButton endpoint routing: CORRECT - Calls /api/ai/analyze-goal or /api/ai/analyze-journal
+  - Request body format: CORRECT - Sends singular { goalId: id } or { journalId: id }
+  - Insights POST handler: EXISTS - Full implementation with caching and refresh support
+  - Pagination parameters: CORRECT - page, pageSize/limit with proper bounds
+  - Error handling: COMPREHENSIVE - Rate limit, validation, not found, server errors
+  - Type safety: PASS - All TypeScript types correct
+  - No issues found in final verification
+  - Phase 6 COMPLETE - Ready for deployment
+
+**Phase 6 COMPLETE - Project Ready for Deployment**
 
 ---
 
@@ -242,3 +349,54 @@
     - Responsive grid layout (1/2/4 cols for stats, 1/3 for chart/activity)
 
 **Phase 5 UI Tasks Complete - Ready for QA**
+
+### 2026-01-19 (Phase 6 Backend)
+- B6.1: Created Claude API client wrapper
+  - src/lib/claude/client.ts - Anthropic SDK integration
+  - analyzeJournalEntry() - sentiment, themes, goal alignment
+  - analyzeGoalProgress() - recommendations, momentum score
+  - generateWeeklyInsights() - summary, achievements, improvements
+  - ClaudeAPIError class for API error handling
+  - Token usage tracking
+  - JSON response parsing with code block handling
+- B6.2: Created AI analysis API routes
+  - POST /api/ai/analyze-goal - analyze goal progress
+  - POST /api/ai/analyze-journal - analyze journal entry
+  - GET /api/ai/insights?timeline=week|month - weekly/monthly insights
+  - GET /api/ai/analyses - list stored analyses with pagination
+- B6.3: Created src/lib/db/ai.ts analysis queries lib
+  - getContextForGoalAnalysis() - fetch goal + related journals
+  - getContextForJournalAnalysis() - fetch journal + linked goals
+  - getContextForWeeklyInsights() - fetch period data + stats
+  - calculateStreak() - streak calculation for insights
+- B6.4: Analysis storage implemented
+  - saveAnalysis() - store in ai_analyses table
+  - getAnalyses() - fetch with filters/pagination
+  - getAnalysisById() - single analysis by ID
+- B6.5: Weekly insights generation
+  - getCachedWeeklyInsight() - check for existing insight
+  - getCachedMonthlyInsight() - check for existing insight
+  - Caching prevents regeneration within same period
+
+**Phase 6 Backend Tasks Complete - Ready for UI Tasks**
+
+### 2026-01-19 (Phase 6 UI)
+- U6.1-U6.6: Created AI Analysis UI components
+  - AnalysisLoadingState: Animated loading with progress bar, rotating messages, skeleton
+  - AnalysisDisplay: Full analysis view with collapsible sections, copy to clipboard
+  - AnalysisDisplayCompact: Compact card for list views
+  - AnalyzeButton: Reusable button with modal, loading state, API integration
+  - AnalysisModal: Standalone modal for viewing existing analyses
+  - RecommendationsList: Action items, suggestions, focus areas with checkboxes
+  - RecommendationsCompact: Compact list for sidebars
+  - InsightsTimeline: Weekly/monthly insights cards with date filter
+  - Insights page: Full dashboard with timeline selector, generate button
+    - Latest insight display with achievements/improvements
+    - Recent analyses sidebar
+    - Tips section
+    - Loading states and empty states
+  - Updated GoalCard: Added Analyze button in expanded actions
+  - Updated JournalEntryCard: Added Analyze button in expanded actions
+  - Sidebar already had Insights link (verified present)
+
+**Phase 6 UI Tasks Complete - Ready for QA**

@@ -1,0 +1,846 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 56;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		A1000001230001 /* MomentumJournalApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000001130001 /* MomentumJournalApp.swift */; };
+		A1000001230002 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000001130002 /* ContentView.swift */; };
+		A1000001230003 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = A1000001130003 /* Assets.xcassets */; };
+		A1000001230004 /* Preview Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = A1000001130004 /* Preview Assets.xcassets */; };
+		A1000001230005 /* Persistence.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000001130005 /* Persistence.swift */; };
+		A1000001230006 /* MomentumJournal.xcdatamodeld in Sources */ = {isa = PBXBuildFile; fileRef = A1000001130006 /* MomentumJournal.xcdatamodeld */; };
+		A1000001230007 /* Config.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000001130007 /* Config.swift */; };
+		A1000001230008 /* KeychainService.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000001130010 /* KeychainService.swift */; };
+		A1000001230009 /* SupabaseClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000001130011 /* SupabaseClient.swift */; };
+		A1000001230010 /* AuthService.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000001130012 /* AuthService.swift */; };
+		A1000001230011 /* LoginView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000001130013 /* LoginView.swift */; };
+		A1000001230012 /* SignUpView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000001130014 /* SignUpView.swift */; };
+		A1000001230020 /* Goal.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000001130020 /* Goal.swift */; };
+		A1000001230021 /* GoalsLocalDataSource.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000001130021 /* GoalsLocalDataSource.swift */; };
+		A1000001230022 /* GoalsNetworkDataSource.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000001130022 /* GoalsNetworkDataSource.swift */; };
+		A1000001230023 /* GoalsRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000001130023 /* GoalsRepository.swift */; };
+		A1000001230024 /* GoalsListViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000001130024 /* GoalsListViewModel.swift */; };
+		A1000001230025 /* GoalFormViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000001130025 /* GoalFormViewModel.swift */; };
+		A1000001230026 /* GoalsListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000001130026 /* GoalsListView.swift */; };
+		A1000001230027 /* GoalFormView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000001130027 /* GoalFormView.swift */; };
+		A1000001230028 /* GoalDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000001130028 /* GoalDetailView.swift */; };
+		A1000001230030 /* JournalEntry.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000001130030 /* JournalEntry.swift */; };
+		A1000001230031 /* JournalsLocalDataSource.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000001130031 /* JournalsLocalDataSource.swift */; };
+		A1000001230032 /* JournalsNetworkDataSource.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000001130032 /* JournalsNetworkDataSource.swift */; };
+		A1000001230033 /* JournalsRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000001130033 /* JournalsRepository.swift */; };
+		A1000001230034 /* JournalsListViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000001130034 /* JournalsListViewModel.swift */; };
+		A1000001230035 /* JournalEditorViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000001130035 /* JournalEditorViewModel.swift */; };
+		A1000001230036 /* MoodSelectorView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000001130036 /* MoodSelectorView.swift */; };
+		A1000001230037 /* TagInputView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000001130037 /* TagInputView.swift */; };
+		A1000001230038 /* JournalsListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000001130038 /* JournalsListView.swift */; };
+		A1000001230039 /* JournalEditorView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000001130039 /* JournalEditorView.swift */; };
+		A1000001230040 /* JournalDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000001130040 /* JournalDetailView.swift */; };
+		A1000001230050 /* DashboardStats.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000001130050 /* DashboardStats.swift */; };
+		A1000001230051 /* DashboardRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000001130051 /* DashboardRepository.swift */; };
+		A1000001230052 /* APIError.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000001130052 /* APIError.swift */; };
+		A1000001230053 /* DashboardViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000001130053 /* DashboardViewModel.swift */; };
+		A1000001230054 /* StatsCardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000001130054 /* StatsCardView.swift */; };
+		A1000001230055 /* RecentActivityRow.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000001130055 /* RecentActivityRow.swift */; };
+		A1000001230056 /* DashboardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000001130056 /* DashboardView.swift */; };
+		A1000001230060 /* AIAnalysis.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000001130060 /* AIAnalysis.swift */; };
+		A1000001230061 /* InsightsRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000001130061 /* InsightsRepository.swift */; };
+		A1000001230062 /* InsightsViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000001130062 /* InsightsViewModel.swift */; };
+		A1000001230063 /* InsightsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000001130063 /* InsightsView.swift */; };
+		A1000001230064 /* InsightSummaryCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000001130064 /* InsightSummaryCard.swift */; };
+		A1000001230065 /* PatternItemView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000001130065 /* PatternItemView.swift */; };
+		A1000001230066 /* RecommendationCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000001130066 /* RecommendationCard.swift */; };
+		A1000001230067 /* GoalProgressCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000001130067 /* GoalProgressCard.swift */; };
+		A1000001230070 /* SyncService.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000001130070 /* SyncService.swift */; };
+		A1000001230071 /* LoadingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000001130071 /* LoadingView.swift */; };
+		A1000001230072 /* ErrorView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000001130072 /* ErrorView.swift */; };
+		A1000001230073 /* EmptyStateView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000001130073 /* EmptyStateView.swift */; };
+		A1000001230074 /* ExpiryWarningBanner.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000001130074 /* ExpiryWarningBanner.swift */; };
+		A1000001230075 /* Colors.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000001130075 /* Colors.swift */; };
+		A1000001230076 /* Typography.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000001130076 /* Typography.swift */; };
+		A1000001230077 /* FlowLayout.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000001130077 /* FlowLayout.swift */; };
+		A43CD84D2F2491DD0088938D /* Supabase in Frameworks */ = {isa = PBXBuildFile; productRef = A1000001250001 /* Supabase */; };
+		A43CD84E2F2491DD0088938D /* KeychainAccess in Frameworks */ = {isa = PBXBuildFile; productRef = A1000001250002 /* KeychainAccess */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXFileReference section */
+		A1000001110001 /* MomentumJournal.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = MomentumJournal.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		A1000001130001 /* MomentumJournalApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MomentumJournalApp.swift; sourceTree = "<group>"; };
+		A1000001130002 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
+		A1000001130003 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		A1000001130004 /* Preview Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = "Preview Assets.xcassets"; sourceTree = "<group>"; };
+		A1000001130005 /* Persistence.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Persistence.swift; sourceTree = "<group>"; };
+		A1000001130007 /* Config.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Config.swift; sourceTree = "<group>"; };
+		A1000001130008 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		A1000001130009 /* MomentumJournal.xcdatamodel */ = {isa = PBXFileReference; lastKnownFileType = wrapper.xcdatamodel; path = MomentumJournal.xcdatamodel; sourceTree = "<group>"; };
+		A1000001130010 /* KeychainService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KeychainService.swift; sourceTree = "<group>"; };
+		A1000001130011 /* SupabaseClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SupabaseClient.swift; sourceTree = "<group>"; };
+		A1000001130012 /* AuthService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuthService.swift; sourceTree = "<group>"; };
+		A1000001130013 /* LoginView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LoginView.swift; sourceTree = "<group>"; };
+		A1000001130014 /* SignUpView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SignUpView.swift; sourceTree = "<group>"; };
+		A1000001130020 /* Goal.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Goal.swift; sourceTree = "<group>"; };
+		A1000001130021 /* GoalsLocalDataSource.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GoalsLocalDataSource.swift; sourceTree = "<group>"; };
+		A1000001130022 /* GoalsNetworkDataSource.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GoalsNetworkDataSource.swift; sourceTree = "<group>"; };
+		A1000001130023 /* GoalsRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GoalsRepository.swift; sourceTree = "<group>"; };
+		A1000001130024 /* GoalsListViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GoalsListViewModel.swift; sourceTree = "<group>"; };
+		A1000001130025 /* GoalFormViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GoalFormViewModel.swift; sourceTree = "<group>"; };
+		A1000001130026 /* GoalsListView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GoalsListView.swift; sourceTree = "<group>"; };
+		A1000001130027 /* GoalFormView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GoalFormView.swift; sourceTree = "<group>"; };
+		A1000001130028 /* GoalDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GoalDetailView.swift; sourceTree = "<group>"; };
+		A1000001130030 /* JournalEntry.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JournalEntry.swift; sourceTree = "<group>"; };
+		A1000001130031 /* JournalsLocalDataSource.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JournalsLocalDataSource.swift; sourceTree = "<group>"; };
+		A1000001130032 /* JournalsNetworkDataSource.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JournalsNetworkDataSource.swift; sourceTree = "<group>"; };
+		A1000001130033 /* JournalsRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JournalsRepository.swift; sourceTree = "<group>"; };
+		A1000001130034 /* JournalsListViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JournalsListViewModel.swift; sourceTree = "<group>"; };
+		A1000001130035 /* JournalEditorViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JournalEditorViewModel.swift; sourceTree = "<group>"; };
+		A1000001130036 /* MoodSelectorView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MoodSelectorView.swift; sourceTree = "<group>"; };
+		A1000001130037 /* TagInputView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TagInputView.swift; sourceTree = "<group>"; };
+		A1000001130038 /* JournalsListView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JournalsListView.swift; sourceTree = "<group>"; };
+		A1000001130039 /* JournalEditorView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JournalEditorView.swift; sourceTree = "<group>"; };
+		A1000001130040 /* JournalDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JournalDetailView.swift; sourceTree = "<group>"; };
+		A1000001130050 /* DashboardStats.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DashboardStats.swift; sourceTree = "<group>"; };
+		A1000001130051 /* DashboardRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DashboardRepository.swift; sourceTree = "<group>"; };
+		A1000001130052 /* APIError.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = APIError.swift; sourceTree = "<group>"; };
+		A1000001130053 /* DashboardViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DashboardViewModel.swift; sourceTree = "<group>"; };
+		A1000001130054 /* StatsCardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StatsCardView.swift; sourceTree = "<group>"; };
+		A1000001130055 /* RecentActivityRow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecentActivityRow.swift; sourceTree = "<group>"; };
+		A1000001130056 /* DashboardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DashboardView.swift; sourceTree = "<group>"; };
+		A1000001130060 /* AIAnalysis.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AIAnalysis.swift; sourceTree = "<group>"; };
+		A1000001130061 /* InsightsRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InsightsRepository.swift; sourceTree = "<group>"; };
+		A1000001130062 /* InsightsViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InsightsViewModel.swift; sourceTree = "<group>"; };
+		A1000001130063 /* InsightsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InsightsView.swift; sourceTree = "<group>"; };
+		A1000001130064 /* InsightSummaryCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InsightSummaryCard.swift; sourceTree = "<group>"; };
+		A1000001130065 /* PatternItemView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PatternItemView.swift; sourceTree = "<group>"; };
+		A1000001130066 /* RecommendationCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecommendationCard.swift; sourceTree = "<group>"; };
+		A1000001130067 /* GoalProgressCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GoalProgressCard.swift; sourceTree = "<group>"; };
+		A1000001130070 /* SyncService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SyncService.swift; sourceTree = "<group>"; };
+		A1000001130071 /* LoadingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LoadingView.swift; sourceTree = "<group>"; };
+		A1000001130072 /* ErrorView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ErrorView.swift; sourceTree = "<group>"; };
+		A1000001130073 /* EmptyStateView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EmptyStateView.swift; sourceTree = "<group>"; };
+		A1000001130074 /* ExpiryWarningBanner.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExpiryWarningBanner.swift; sourceTree = "<group>"; };
+		A1000001130075 /* Colors.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Colors.swift; sourceTree = "<group>"; };
+		A1000001130076 /* Typography.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Typography.swift; sourceTree = "<group>"; };
+		A1000001130077 /* FlowLayout.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FlowLayout.swift; sourceTree = "<group>"; };
+/* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		A1000001140001 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				A43CD84E2F2491DD0088938D /* KeychainAccess in Frameworks */,
+				A43CD84D2F2491DD0088938D /* Supabase in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		A1000001150001 = {
+			isa = PBXGroup;
+			children = (
+				A1000001150002 /* MomentumJournal */,
+				A1000001150003 /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		A1000001150002 /* MomentumJournal */ = {
+			isa = PBXGroup;
+			children = (
+				A1000001150005 /* Core */,
+				A1000001150008 /* Features */,
+				A1000001150080 /* Shared */,
+				A1000001130001 /* MomentumJournalApp.swift */,
+				A1000001130002 /* ContentView.swift */,
+				A1000001130005 /* Persistence.swift */,
+				A1000001130007 /* Config.swift */,
+				A1000001130006 /* MomentumJournal.xcdatamodeld */,
+				A1000001130003 /* Assets.xcassets */,
+				A1000001130008 /* Info.plist */,
+				A1000001150004 /* Preview Content */,
+			);
+			path = MomentumJournal;
+			sourceTree = "<group>";
+		};
+		A1000001150003 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				A1000001110001 /* MomentumJournal.app */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		A1000001150004 /* Preview Content */ = {
+			isa = PBXGroup;
+			children = (
+				A1000001130004 /* Preview Assets.xcassets */,
+			);
+			path = "Preview Content";
+			sourceTree = "<group>";
+		};
+		A1000001150005 /* Core */ = {
+			isa = PBXGroup;
+			children = (
+				A1000001150015 /* Models */,
+				A1000001150006 /* Networking */,
+				A1000001150007 /* Services */,
+			);
+			path = Core;
+			sourceTree = "<group>";
+		};
+		A1000001150006 /* Networking */ = {
+			isa = PBXGroup;
+			children = (
+				A1000001130011 /* SupabaseClient.swift */,
+			);
+			path = Networking;
+			sourceTree = "<group>";
+		};
+		A1000001150007 /* Services */ = {
+			isa = PBXGroup;
+			children = (
+				A1000001130010 /* KeychainService.swift */,
+				A1000001130012 /* AuthService.swift */,
+				A1000001130070 /* SyncService.swift */,
+			);
+			path = Services;
+			sourceTree = "<group>";
+		};
+		A1000001150008 /* Features */ = {
+			isa = PBXGroup;
+			children = (
+				A1000001150009 /* Auth */,
+				A1000001150020 /* Goals */,
+				A1000001150030 /* Journals */,
+				A1000001150050 /* Dashboard */,
+				A1000001150060 /* Insights */,
+			);
+			path = Features;
+			sourceTree = "<group>";
+		};
+		A1000001150009 /* Auth */ = {
+			isa = PBXGroup;
+			children = (
+				A1000001150010 /* Views */,
+			);
+			path = Auth;
+			sourceTree = "<group>";
+		};
+		A1000001150010 /* Views */ = {
+			isa = PBXGroup;
+			children = (
+				A1000001130013 /* LoginView.swift */,
+				A1000001130014 /* SignUpView.swift */,
+			);
+			path = Views;
+			sourceTree = "<group>";
+		};
+		A1000001150015 /* Models */ = {
+			isa = PBXGroup;
+			children = (
+				A1000001130020 /* Goal.swift */,
+				A1000001130030 /* JournalEntry.swift */,
+				A1000001130050 /* DashboardStats.swift */,
+				A1000001130052 /* APIError.swift */,
+				A1000001130060 /* AIAnalysis.swift */,
+			);
+			path = Models;
+			sourceTree = "<group>";
+		};
+		A1000001150020 /* Goals */ = {
+			isa = PBXGroup;
+			children = (
+				A1000001150021 /* Repository */,
+				A1000001150022 /* ViewModels */,
+				A1000001150023 /* Views */,
+			);
+			path = Goals;
+			sourceTree = "<group>";
+		};
+		A1000001150021 /* Repository */ = {
+			isa = PBXGroup;
+			children = (
+				A1000001130021 /* GoalsLocalDataSource.swift */,
+				A1000001130022 /* GoalsNetworkDataSource.swift */,
+				A1000001130023 /* GoalsRepository.swift */,
+			);
+			path = Repository;
+			sourceTree = "<group>";
+		};
+		A1000001150022 /* ViewModels */ = {
+			isa = PBXGroup;
+			children = (
+				A1000001130024 /* GoalsListViewModel.swift */,
+				A1000001130025 /* GoalFormViewModel.swift */,
+			);
+			path = ViewModels;
+			sourceTree = "<group>";
+		};
+		A1000001150023 /* Views */ = {
+			isa = PBXGroup;
+			children = (
+				A1000001130026 /* GoalsListView.swift */,
+				A1000001130027 /* GoalFormView.swift */,
+				A1000001130028 /* GoalDetailView.swift */,
+			);
+			path = Views;
+			sourceTree = "<group>";
+		};
+		A1000001150030 /* Journals */ = {
+			isa = PBXGroup;
+			children = (
+				A1000001150031 /* Repository */,
+				A1000001150032 /* ViewModels */,
+				A1000001150033 /* Views */,
+			);
+			path = Journals;
+			sourceTree = "<group>";
+		};
+		A1000001150031 /* Repository */ = {
+			isa = PBXGroup;
+			children = (
+				A1000001130031 /* JournalsLocalDataSource.swift */,
+				A1000001130032 /* JournalsNetworkDataSource.swift */,
+				A1000001130033 /* JournalsRepository.swift */,
+			);
+			path = Repository;
+			sourceTree = "<group>";
+		};
+		A1000001150032 /* ViewModels */ = {
+			isa = PBXGroup;
+			children = (
+				A1000001130034 /* JournalsListViewModel.swift */,
+				A1000001130035 /* JournalEditorViewModel.swift */,
+			);
+			path = ViewModels;
+			sourceTree = "<group>";
+		};
+		A1000001150033 /* Views */ = {
+			isa = PBXGroup;
+			children = (
+				A1000001150034 /* Components */,
+				A1000001130038 /* JournalsListView.swift */,
+				A1000001130039 /* JournalEditorView.swift */,
+				A1000001130040 /* JournalDetailView.swift */,
+			);
+			path = Views;
+			sourceTree = "<group>";
+		};
+		A1000001150034 /* Components */ = {
+			isa = PBXGroup;
+			children = (
+				A1000001130036 /* MoodSelectorView.swift */,
+				A1000001130037 /* TagInputView.swift */,
+			);
+			path = Components;
+			sourceTree = "<group>";
+		};
+		A1000001150050 /* Dashboard */ = {
+			isa = PBXGroup;
+			children = (
+				A1000001150051 /* Repository */,
+				A1000001150052 /* ViewModels */,
+				A1000001150053 /* Views */,
+			);
+			path = Dashboard;
+			sourceTree = "<group>";
+		};
+		A1000001150051 /* Repository */ = {
+			isa = PBXGroup;
+			children = (
+				A1000001130051 /* DashboardRepository.swift */,
+			);
+			path = Repository;
+			sourceTree = "<group>";
+		};
+		A1000001150052 /* ViewModels */ = {
+			isa = PBXGroup;
+			children = (
+				A1000001130053 /* DashboardViewModel.swift */,
+			);
+			path = ViewModels;
+			sourceTree = "<group>";
+		};
+		A1000001150053 /* Views */ = {
+			isa = PBXGroup;
+			children = (
+				A1000001130054 /* StatsCardView.swift */,
+				A1000001130055 /* RecentActivityRow.swift */,
+				A1000001130056 /* DashboardView.swift */,
+			);
+			path = Views;
+			sourceTree = "<group>";
+		};
+		A1000001150060 /* Insights */ = {
+			isa = PBXGroup;
+			children = (
+				A1000001150061 /* Repository */,
+				A1000001150062 /* ViewModels */,
+				A1000001150063 /* Views */,
+			);
+			path = Insights;
+			sourceTree = "<group>";
+		};
+		A1000001150061 /* Repository */ = {
+			isa = PBXGroup;
+			children = (
+				A1000001130061 /* InsightsRepository.swift */,
+			);
+			path = Repository;
+			sourceTree = "<group>";
+		};
+		A1000001150062 /* ViewModels */ = {
+			isa = PBXGroup;
+			children = (
+				A1000001130062 /* InsightsViewModel.swift */,
+			);
+			path = ViewModels;
+			sourceTree = "<group>";
+		};
+		A1000001150063 /* Views */ = {
+			isa = PBXGroup;
+			children = (
+				A1000001150064 /* Components */,
+				A1000001130063 /* InsightsView.swift */,
+			);
+			path = Views;
+			sourceTree = "<group>";
+		};
+		A1000001150064 /* Components */ = {
+			isa = PBXGroup;
+			children = (
+				A1000001130064 /* InsightSummaryCard.swift */,
+				A1000001130065 /* PatternItemView.swift */,
+				A1000001130066 /* RecommendationCard.swift */,
+				A1000001130067 /* GoalProgressCard.swift */,
+			);
+			path = Components;
+			sourceTree = "<group>";
+		};
+		A1000001150080 /* Shared */ = {
+			isa = PBXGroup;
+			children = (
+				A1000001150081 /* UI */,
+			);
+			path = Shared;
+			sourceTree = "<group>";
+		};
+		A1000001150081 /* UI */ = {
+			isa = PBXGroup;
+			children = (
+				A1000001150082 /* Components */,
+				A1000001150083 /* Styles */,
+			);
+			path = UI;
+			sourceTree = "<group>";
+		};
+		A1000001150082 /* Components */ = {
+			isa = PBXGroup;
+			children = (
+				A1000001130071 /* LoadingView.swift */,
+				A1000001130072 /* ErrorView.swift */,
+				A1000001130073 /* EmptyStateView.swift */,
+				A1000001130074 /* ExpiryWarningBanner.swift */,
+				A1000001130077 /* FlowLayout.swift */,
+			);
+			path = Components;
+			sourceTree = "<group>";
+		};
+		A1000001150083 /* Styles */ = {
+			isa = PBXGroup;
+			children = (
+				A1000001130075 /* Colors.swift */,
+				A1000001130076 /* Typography.swift */,
+			);
+			path = Styles;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		A1000001160001 /* MomentumJournal */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = A1000001190001 /* Build configuration list for PBXNativeTarget "MomentumJournal" */;
+			buildPhases = (
+				A1000001170001 /* Sources */,
+				A1000001140001 /* Frameworks */,
+				A1000001180001 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = MomentumJournal;
+			packageProductDependencies = (
+				A1000001250001 /* Supabase */,
+				A1000001250002 /* KeychainAccess */,
+			);
+			productName = MomentumJournal;
+			productReference = A1000001110001 /* MomentumJournal.app */;
+			productType = "com.apple.product-type.application";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		A1000001200001 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = 1;
+				LastSwiftUpdateCheck = 1500;
+				LastUpgradeCheck = 1500;
+				TargetAttributes = {
+					A1000001160001 = {
+						CreatedOnToolsVersion = 15.0;
+					};
+				};
+			};
+			buildConfigurationList = A1000001210001 /* Build configuration list for PBXProject "MomentumJournal" */;
+			compatibilityVersion = "Xcode 14.0";
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				en,
+				Base,
+			);
+			mainGroup = A1000001150001;
+			packageReferences = (
+				A1000001240001 /* XCRemoteSwiftPackageReference "supabase-swift" */,
+				A1000001240002 /* XCRemoteSwiftPackageReference "KeychainAccess" */,
+			);
+			productRefGroup = A1000001150003 /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				A1000001160001 /* MomentumJournal */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		A1000001180001 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				A1000001230004 /* Preview Assets.xcassets in Resources */,
+				A1000001230003 /* Assets.xcassets in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		A1000001170001 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				A1000001230006 /* MomentumJournal.xcdatamodeld in Sources */,
+				A1000001230001 /* MomentumJournalApp.swift in Sources */,
+				A1000001230005 /* Persistence.swift in Sources */,
+				A1000001230002 /* ContentView.swift in Sources */,
+				A1000001230007 /* Config.swift in Sources */,
+				A1000001230008 /* KeychainService.swift in Sources */,
+				A1000001230009 /* SupabaseClient.swift in Sources */,
+				A1000001230010 /* AuthService.swift in Sources */,
+				A1000001230011 /* LoginView.swift in Sources */,
+				A1000001230012 /* SignUpView.swift in Sources */,
+				A1000001230020 /* Goal.swift in Sources */,
+				A1000001230021 /* GoalsLocalDataSource.swift in Sources */,
+				A1000001230022 /* GoalsNetworkDataSource.swift in Sources */,
+				A1000001230023 /* GoalsRepository.swift in Sources */,
+				A1000001230024 /* GoalsListViewModel.swift in Sources */,
+				A1000001230025 /* GoalFormViewModel.swift in Sources */,
+				A1000001230026 /* GoalsListView.swift in Sources */,
+				A1000001230027 /* GoalFormView.swift in Sources */,
+				A1000001230028 /* GoalDetailView.swift in Sources */,
+				A1000001230030 /* JournalEntry.swift in Sources */,
+				A1000001230031 /* JournalsLocalDataSource.swift in Sources */,
+				A1000001230032 /* JournalsNetworkDataSource.swift in Sources */,
+				A1000001230033 /* JournalsRepository.swift in Sources */,
+				A1000001230034 /* JournalsListViewModel.swift in Sources */,
+				A1000001230035 /* JournalEditorViewModel.swift in Sources */,
+				A1000001230036 /* MoodSelectorView.swift in Sources */,
+				A1000001230037 /* TagInputView.swift in Sources */,
+				A1000001230038 /* JournalsListView.swift in Sources */,
+				A1000001230039 /* JournalEditorView.swift in Sources */,
+				A1000001230040 /* JournalDetailView.swift in Sources */,
+				A1000001230050 /* DashboardStats.swift in Sources */,
+				A1000001230051 /* DashboardRepository.swift in Sources */,
+				A1000001230052 /* APIError.swift in Sources */,
+				A1000001230053 /* DashboardViewModel.swift in Sources */,
+				A1000001230054 /* StatsCardView.swift in Sources */,
+				A1000001230055 /* RecentActivityRow.swift in Sources */,
+				A1000001230056 /* DashboardView.swift in Sources */,
+				A1000001230060 /* AIAnalysis.swift in Sources */,
+				A1000001230061 /* InsightsRepository.swift in Sources */,
+				A1000001230062 /* InsightsViewModel.swift in Sources */,
+				A1000001230063 /* InsightsView.swift in Sources */,
+				A1000001230064 /* InsightSummaryCard.swift in Sources */,
+				A1000001230065 /* PatternItemView.swift in Sources */,
+				A1000001230066 /* RecommendationCard.swift in Sources */,
+				A1000001230067 /* GoalProgressCard.swift in Sources */,
+				A1000001230070 /* SyncService.swift in Sources */,
+				A1000001230071 /* LoadingView.swift in Sources */,
+				A1000001230072 /* ErrorView.swift in Sources */,
+				A1000001230073 /* EmptyStateView.swift in Sources */,
+				A1000001230074 /* ExpiryWarningBanner.swift in Sources */,
+				A1000001230075 /* Colors.swift in Sources */,
+				A1000001230076 /* Typography.swift in Sources */,
+				A1000001230077 /* FlowLayout.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin XCBuildConfiguration section */
+		A1000001220001 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"DEBUG=1",
+					"$(inherited)",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 15.0;
+				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				SDKROOT = iphoneos;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "DEBUG $(inherited)";
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+			};
+			name = Debug;
+		};
+		A1000001220002 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 15.0;
+				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				MTL_FAST_MATH = YES;
+				SDKROOT = iphoneos;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				VALIDATE_PRODUCT = YES;
+			};
+			name = Release;
+		};
+		A1000001220003 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_ASSET_PATHS = "\"MomentumJournal/Preview Content\"";
+				DEVELOPMENT_TEAM = N3U9SK6WW2;
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = MomentumJournal/Info.plist;
+				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
+				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
+				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.nigeshshakya.momentumjournal;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		A1000001220004 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_ASSET_PATHS = "\"MomentumJournal/Preview Content\"";
+				DEVELOPMENT_TEAM = N3U9SK6WW2;
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = MomentumJournal/Info.plist;
+				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
+				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
+				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.nigeshshakya.momentumjournal;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		A1000001190001 /* Build configuration list for PBXNativeTarget "MomentumJournal" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				A1000001220003 /* Debug */,
+				A1000001220004 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		A1000001210001 /* Build configuration list for PBXProject "MomentumJournal" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				A1000001220001 /* Debug */,
+				A1000001220002 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+/* End XCConfigurationList section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		A1000001240001 /* XCRemoteSwiftPackageReference "supabase-swift" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/supabase/supabase-swift";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 2.0.0;
+			};
+		};
+		A1000001240002 /* XCRemoteSwiftPackageReference "KeychainAccess" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/kishikawakatsumi/KeychainAccess";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 4.2.2;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		A1000001250001 /* Supabase */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = A1000001240001 /* XCRemoteSwiftPackageReference "supabase-swift" */;
+			productName = Supabase;
+		};
+		A1000001250002 /* KeychainAccess */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = A1000001240002 /* XCRemoteSwiftPackageReference "KeychainAccess" */;
+			productName = KeychainAccess;
+		};
+/* End XCSwiftPackageProductDependency section */
+
+/* Begin XCVersionGroup section */
+		A1000001130006 /* MomentumJournal.xcdatamodeld */ = {
+			isa = XCVersionGroup;
+			children = (
+				A1000001130009 /* MomentumJournal.xcdatamodel */,
+			);
+			currentVersion = A1000001130009 /* MomentumJournal.xcdatamodel */;
+			path = MomentumJournal.xcdatamodeld;
+			sourceTree = "<group>";
+			versionGroupType = wrapper.xcdatamodel;
+		};
+/* End XCVersionGroup section */
+	};
+	rootObject = A1000001200001 /* Project object */;
+}

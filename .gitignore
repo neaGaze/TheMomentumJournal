@@ -32,3 +32,15 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# iOS/Xcode
+iOS/build/
+iOS/DerivedData/
+iOS/*.xcuserstate
+iOS/*.xcworkspace/xcuserdata/
+iOS/*.xcodeproj/xcuserdata/
+iOS/*.xcodeproj/project.xcworkspace/xcuserdata/
+iOS/.build/
+*.ipa
+*.dSYM.zip
+*.dSYM

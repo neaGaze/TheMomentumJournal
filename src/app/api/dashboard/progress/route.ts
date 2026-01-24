@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { createClient } from '@/lib/supabase/server';
+import { createClient as createSupabaseClient } from '@supabase/supabase-js';
 import { getGoalsProgressOverTime, type Timeline } from '@/lib/db/dashboard';
 
 const timelineSchema = z.enum(['week', 'month', 'year']);
@@ -21,13 +22,37 @@ const timelineSchema = z.enum(['week', 'month', 'year']);
  *   - activeGoals: active goals at that point
  *   - journalEntries: entries in that interval
  *   - avgProgress: average goal progress percentage
+ *
+ * Auth: Supports both cookie-based (web) and Bearer token (iOS) authentication
  */
 export async function GET(request: NextRequest) {
   try {
-    const supabase = await createClient();
-    const {
+    // Try cookie-based auth first (web client)
+    let supabase = await createClient();
+    let {
       data: { user },
     } = await supabase.auth.getUser();
+
+    // If no user from cookies, try Bearer token (iOS client)
+    if (!user) {
+      const authHeader = request.headers.get('Authorization');
+      if (authHeader?.startsWith('Bearer ')) {
+        const token = authHeader.substring(7);
+        supabase = createSupabaseClient(
+          process.env.NEXT_PUBLIC_SUPABASE_URL!,
+          process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+          {
+            global: {
+              headers: {
+                Authorization: `Bearer ${token}`,
+              },
+            },
+          }
+        );
+        const result = await supabase.auth.getUser(token);
+        user = result.data.user;
+      }
+    }
 
     if (!user) {
       return NextResponse.json(

@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { ForgotPasswordForm } from './forgot-password-form'
 
 interface AuthFormProps {
@@ -17,7 +17,11 @@ export function AuthForm({ mode }: AuthFormProps) {
   const [error, setError] = useState<string | null>(null)
   const [showForgotPassword, setShowForgotPassword] = useState(false)
   const router = useRouter()
+  const searchParams = useSearchParams()
   const supabase = createClient()
+
+  // Get redirect path from URL params (set by middleware when accessing protected routes)
+  const redirectPath = searchParams.get('redirect') || '/dashboard'
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -46,10 +50,11 @@ export function AuthForm({ mode }: AuthFormProps) {
         })
         if (error) throw error
         router.refresh()
-        router.push('/dashboard')
+        // Redirect to original destination or dashboard
+        router.push(redirectPath)
       }
-    } catch (err: any) {
-      setError(err.message)
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'An error occurred')
     } finally {
       setLoading(false)
     }

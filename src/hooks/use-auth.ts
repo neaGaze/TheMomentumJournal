@@ -80,22 +80,26 @@ export function useAuth() {
   useEffect(() => {
     // Get initial session
     supabase.auth.getSession().then(({ data: { session } }) => {
+      devLog('Initial session check', { hasSession: !!session })
       setSession(session)
       setUser(session?.user ?? null)
       setLoading(false)
       // Check if session needs refresh
-      refreshSessionIfNeeded(session)
+      if (session) {
+        refreshSessionIfNeeded(session)
+      }
     })
 
     // Listen for auth changes
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((event, session) => {
+      devLog('Auth state change', { event, hasSession: !!session })
       setSession(session)
       setUser(session?.user ?? null)
 
-      // Refresh session on token refresh events
-      if (event === 'TOKEN_REFRESHED') {
+      // Refresh page on sign in/out to sync server state
+      if (event === 'SIGNED_IN' || event === 'SIGNED_OUT' || event === 'TOKEN_REFRESHED') {
         router.refresh()
       }
     })

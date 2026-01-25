@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import { useToast } from '@/hooks/useToast'
-import type { Timeline, DashboardStats, ProgressDataPoint } from '@/lib/db/dashboard'
+import type { Timeline, DashboardStats, ProgressDataPoint, GoalActivityHeatMapResult } from '@/lib/db/dashboard'
 import {
   StatsCard,
   ActiveGoalsIcon,
@@ -15,32 +15,36 @@ import { GoalsProgressChart } from '@/components/dashboard/GoalsProgressChart'
 import { RecentActivityFeed } from '@/components/dashboard/RecentActivityFeed'
 import { QuickActions } from '@/components/dashboard/QuickActions'
 import { TimelineSelector } from '@/components/dashboard/TimelineSelector'
+import { ActivityHeatmap } from '@/components/dashboard/ActivityHeatmap'
 
 interface DashboardData {
   stats: DashboardStats | null
   progress: ProgressDataPoint[]
+  goalHeatmap: GoalActivityHeatMapResult | null
 }
 
 export default function DashboardPage() {
   const [timeline, setTimeline] = useState<Timeline>('week')
-  const [data, setData] = useState<DashboardData>({ stats: null, progress: [] })
+  const [data, setData] = useState<DashboardData>({ stats: null, progress: [], goalHeatmap: null })
   const [loading, setLoading] = useState(true)
   const { showToast } = useToast()
 
   const fetchDashboardData = useCallback(async (selectedTimeline: Timeline) => {
     setLoading(true)
     try {
-      const [statsRes, progressRes] = await Promise.all([
+      const [statsRes, progressRes, goalHeatmapRes] = await Promise.all([
         fetch(`/api/dashboard/stats?timeline=${selectedTimeline}&limit=10`),
         fetch(`/api/dashboard/progress?timeline=${selectedTimeline}`),
+        fetch(`/api/dashboard/goal-heatmap?timeline=${selectedTimeline}`),
       ])
 
-      if (!statsRes.ok || !progressRes.ok) {
+      if (!statsRes.ok || !progressRes.ok || !goalHeatmapRes.ok) {
         throw new Error('Failed to fetch dashboard data')
       }
 
       const statsJson = await statsRes.json()
       const progressJson = await progressRes.json()
+      const goalHeatmapJson = await goalHeatmapRes.json()
 
       if (!statsJson.success) {
         throw new Error(statsJson.error?.message || 'Failed to fetch stats')
@@ -50,9 +54,14 @@ export default function DashboardPage() {
         throw new Error(progressJson.error?.message || 'Failed to fetch progress')
       }
 
+      if (!goalHeatmapJson.success) {
+        throw new Error(goalHeatmapJson.error?.message || 'Failed to fetch goal heatmap')
+      }
+
       setData({
         stats: statsJson.data,
         progress: progressJson.data?.points || [],
+        goalHeatmap: goalHeatmapJson.data,
       })
     } catch (error) {
       console.error('Dashboard fetch error:', error)
@@ -70,7 +79,7 @@ export default function DashboardPage() {
     setTimeline(newTimeline)
   }
 
-  const { stats, progress } = data
+  const { stats, progress, goalHeatmap } = data
   const goalsStats = stats?.goals
   const journalStats = stats?.journals
 
@@ -86,6 +95,15 @@ export default function DashboardPage() {
           value={timeline}
           onChange={handleTimelineChange}
           disabled={loading}
+        />
+      </div>
+
+      {/* Activity Heatmap */}
+      <div className="mb-6 sm:mb-8">
+        <ActivityHeatmap
+          data={goalHeatmap}
+          timeline={timeline}
+          loading={loading}
         />
       </div>
 

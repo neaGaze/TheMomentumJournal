@@ -74,6 +74,20 @@ export interface ProgressDataPoint {
 // ============================================
 
 /**
+ * Get ISO week start (Monday) for a date
+ * Matches component's getWeekStart logic
+ */
+function getWeekStart(date: Date): Date {
+  const d = new Date(date);
+  const day = d.getDay();
+  // Adjust so Monday = 0: if Sunday (0), go back 6 days; else go back (day - 1) days
+  const diff = day === 0 ? -6 : 1 - day;
+  d.setDate(d.getDate() + diff);
+  d.setHours(0, 0, 0, 0);
+  return d;
+}
+
+/**
  * Get date range based on timeline
  */
 function getDateRange(timeline: Timeline): { startDate: string; endDate: string } {
@@ -83,9 +97,9 @@ function getDateRange(timeline: Timeline): { startDate: string; endDate: string 
 
   switch (timeline) {
     case 'week':
-      const weekAgo = new Date(now);
-      weekAgo.setDate(weekAgo.getDate() - 7);
-      startDate = weekAgo.toISOString().split('T')[0];
+      // Use ISO week start (Monday) to align with component's date display
+      const weekStart = getWeekStart(now);
+      startDate = weekStart.toISOString().split('T')[0];
       break;
     case 'month':
       const monthAgo = new Date(now);
@@ -504,4 +518,213 @@ export async function getDashboardStats(
   ]);
 
   return { goals, journals, recentActivity };
+}
+
+// ============================================
+// Heat Map Types and Functions
+// ============================================
+
+export interface HeatMapDataPoint {
+  date: string; // YYYY-MM-DD
+  count: number;
+  hasGoalMention: boolean;
+}
+
+export interface HeatMapResult {
+  data: HeatMapDataPoint[];
+  totalEntries: number;
+  daysWithEntries: number;
+  maxCount: number;
+}
+
+/**
+ * Get journal entry heat map data grouped by date
+ * Optimized query using date aggregation
+ */
+export async function getJournalHeatMapData(
+  supabase: SupabaseClientAny,
+  userId: string,
+  timeline: Timeline
+): Promise<HeatMapResult> {
+  const { startDate, endDate } = getDateRange(timeline);
+
+  // Get journal entries with date and goal mention info
+  const { data, error } = await supabase
+    .from('journal_entries')
+    .select(`
+      id,
+      entry_date,
+      journal_goal_mentions (goal_id)
+    `)
+    .eq('user_id', userId)
+    .gte('entry_date', startDate)
+    .lte('entry_date', endDate)
+    .order('entry_date', { ascending: true });
+
+  if (error) {
+    throw new Error(`Failed to fetch heat map data: ${error.message}`);
+  }
+
+  const entries = data ?? [];
+
+  // Group by date
+  const dateMap = new Map<string, { count: number; hasGoalMention: boolean }>();
+
+  for (const entry of entries) {
+    const date = entry.entry_date;
+    const existing = dateMap.get(date) ?? { count: 0, hasGoalMention: false };
+    existing.count++;
+    if (entry.journal_goal_mentions && entry.journal_goal_mentions.length > 0) {
+      existing.hasGoalMention = true;
+    }
+    dateMap.set(date, existing);
+  }
+
+  // Convert to array
+  const heatMapData: HeatMapDataPoint[] = [];
+  let maxCount = 0;
+
+  dateMap.forEach(({ count, hasGoalMention }, date) => {
+    heatMapData.push({ date, count, hasGoalMention });
+    if (count > maxCount) maxCount = count;
+  });
+
+  // Sort by date
+  heatMapData.sort((a, b) => a.date.localeCompare(b.date));
+
+  return {
+    data: heatMapData,
+    totalEntries: entries.length,
+    daysWithEntries: dateMap.size,
+    maxCount,
+  };
+}
+
+// ============================================
+// Goal Activity Heat Map (New Design)
+// ============================================
+
+export interface GoalInfo {
+  id: string;
+  title: string;
+  color: string;
+}
+
+export interface GoalActivityDay {
+  date: string; // YYYY-MM-DD
+  dayOfWeek: number; // 0=Sun, 1=Mon, ..., 6=Sat
+}
+
+export interface GoalActivityData {
+  goalId: string;
+  dates: Set<string>; // Dates when goal was worked on
+}
+
+export interface GoalActivityHeatMapResult {
+  goals: GoalInfo[];
+  activityByGoal: Record<string, string[]>; // goalId -> array of dates
+  dateRange: {
+    start: string;
+    end: string;
+  };
+}
+
+// Predefined colors for goals (cycle through if more goals)
+const GOAL_COLORS = [
+  '#3B82F6', // blue-500
+  '#10B981', // emerald-500
+  '#F59E0B', // amber-500
+  '#EF4444', // red-500
+  '#8B5CF6', // violet-500
+  '#EC4899', // pink-500
+  '#06B6D4', // cyan-500
+  '#F97316', // orange-500
+  '#84CC16', // lime-500
+  '#6366F1', // indigo-500
+];
+
+/**
+ * Get goal activity heat map data
+ * Returns goals and which days they were worked on (via journal mentions)
+ */
+export async function getGoalActivityHeatMapData(
+  supabase: SupabaseClientAny,
+  userId: string,
+  timeline: Timeline
+): Promise<GoalActivityHeatMapResult> {
+  const { startDate, endDate } = getDateRange(timeline);
+
+  // Get all active goals for user
+  const { data: goalsData, error: goalsError } = await supabase
+    .from('goals')
+    .select('id, title')
+    .eq('user_id', userId)
+    .in('status', ['active', 'completed'])
+    .order('created_at', { ascending: true });
+
+  if (goalsError) {
+    throw new Error(`Failed to fetch goals: ${goalsError.message}`);
+  }
+
+  const goals = goalsData ?? [];
+
+  // Assign colors to goals
+  const goalsWithColors: GoalInfo[] = goals.map((g, idx) => ({
+    id: g.id,
+    title: g.title,
+    color: GOAL_COLORS[idx % GOAL_COLORS.length],
+  }));
+
+  // Get all journal entries with goal mentions in date range
+  // Query from journal_entries to properly filter by user_id, then join mentions
+  const { data: entriesWithMentions, error: mentionsError } = await supabase
+    .from('journal_entries')
+    .select(`
+      entry_date,
+      journal_goal_mentions (goal_id)
+    `)
+    .eq('user_id', userId)
+    .gte('entry_date', startDate)
+    .lte('entry_date', endDate);
+
+  if (mentionsError) {
+    throw new Error(`Failed to fetch goal mentions: ${mentionsError.message}`);
+  }
+
+  // Build activity map
+  const activityByGoal: Record<string, string[]> = {};
+
+  // Initialize all goals with empty arrays
+  for (const goal of goalsWithColors) {
+    activityByGoal[goal.id] = [];
+  }
+
+  // Populate with actual activity data from entries
+  const goalDateSets: Record<string, Set<string>> = {};
+  const entries = entriesWithMentions ?? [];
+
+  for (const entry of entries) {
+    const mentions = entry.journal_goal_mentions ?? [];
+    for (const mention of mentions) {
+      const goalId = (mention as { goal_id: string }).goal_id;
+      if (!goalDateSets[goalId]) {
+        goalDateSets[goalId] = new Set();
+      }
+      goalDateSets[goalId].add(entry.entry_date);
+    }
+  }
+
+  // Convert Sets to arrays
+  for (const goalId of Object.keys(goalDateSets)) {
+    activityByGoal[goalId] = Array.from(goalDateSets[goalId]).sort();
+  }
+
+  return {
+    goals: goalsWithColors,
+    activityByGoal,
+    dateRange: {
+      start: startDate,
+      end: endDate,
+    },
+  };
 }

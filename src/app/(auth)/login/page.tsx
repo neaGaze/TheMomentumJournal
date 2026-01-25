@@ -1,4 +1,15 @@
+import { Suspense } from 'react'
 import { AuthForm } from '@/components/auth/auth-form'
+
+function LoginFormFallback() {
+  return (
+    <div className="space-y-4 w-full max-w-md animate-pulse">
+      <div className="h-10 bg-gray-200 rounded-lg" />
+      <div className="h-10 bg-gray-200 rounded-lg" />
+      <div className="h-10 bg-gray-200 rounded-lg" />
+    </div>
+  )
+}
 
 export default function LoginPage() {
   return (
@@ -8,7 +19,9 @@ export default function LoginPage() {
           <h1 className="text-3xl font-bold mb-2">Welcome Back</h1>
           <p className="text-gray-600">Login to The Momentum Journal</p>
         </div>
-        <AuthForm mode="login" />
+        <Suspense fallback={<LoginFormFallback />}>
+          <AuthForm mode="login" />
+        </Suspense>
       </div>
     </div>
   )

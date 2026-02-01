@@ -100,6 +100,30 @@ final class GoalsListViewModel: ObservableObject {
         }
     }
 
+    // MARK: - Link Goal
+
+    func linkGoal(_ goalId: UUID, toParent parentGoalId: UUID) async throws {
+        let updatedGoal = try await repository.linkGoal(goalId, toParent: parentGoalId)
+
+        // Update local array
+        if let index = goals.firstIndex(where: { $0.id == goalId }) {
+            goals[index] = updatedGoal
+            applyFilters()
+        }
+    }
+
+    // MARK: - Unlink Goal
+
+    func unlinkGoal(_ goalId: UUID) async throws {
+        let updatedGoal = try await repository.unlinkGoal(goalId)
+
+        // Update local array
+        if let index = goals.firstIndex(where: { $0.id == goalId }) {
+            goals[index] = updatedGoal
+            applyFilters()
+        }
+    }
+
     // MARK: - Grouped Goals
 
     var goalsByType: [GoalType: [Goal]] {

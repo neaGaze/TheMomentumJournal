@@ -58,6 +58,7 @@ export interface Goal {
   targetDate: Date | null;
   status: GoalStatus;
   progressPercentage: number;
+  parentGoalId: string | null;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -121,6 +122,14 @@ export interface GoalWithJournals extends Goal {
   mentionCount: number;
 }
 
+export interface GoalWithChildren extends Goal {
+  childGoals: Goal[];
+}
+
+export interface GoalWithParent extends Goal {
+  parentGoal: Goal | null;
+}
+
 export interface WeeklyInsightWithAnalysis extends WeeklyInsight {
   aiAnalysis: AIAnalysis | null;
 }
@@ -137,6 +146,7 @@ export interface CreateGoalInput {
   targetDate?: string | null; // ISO date string
   status?: GoalStatus;
   progressPercentage?: number;
+  parentGoalId?: string | null; // Link short-term goal to long-term goal
 }
 
 export interface UpdateGoalInput {
@@ -147,6 +157,7 @@ export interface UpdateGoalInput {
   targetDate?: string | null;
   status?: GoalStatus;
   progressPercentage?: number;
+  parentGoalId?: string | null; // Link/unlink short-term goal to/from long-term goal
 }
 
 export interface CreateJournalEntryInput {
@@ -237,6 +248,8 @@ export interface GoalFilters {
   status?: GoalStatus;
   category?: string;
   search?: string;
+  parentGoalId?: string | null; // Filter by parent (null = unlinked short-term goals)
+  hasParent?: boolean; // true = only linked, false = only unlinked
 }
 
 export interface GoalSortOptions {
@@ -289,6 +302,7 @@ export function mapGoalFromRow(row: GoalRow): Goal {
     targetDate: row.target_date ? new Date(row.target_date) : null,
     status: row.status,
     progressPercentage: row.progress_percentage,
+    parentGoalId: row.parent_goal_id,
     createdAt: new Date(row.created_at),
     updatedAt: new Date(row.updated_at),
   };
@@ -409,3 +423,35 @@ export const MOOD_EMOJIS: Record<Mood, string> = {
   bad: '2/5',
   terrible: '1/5',
 };
+
+// ============================================
+// Goal Linking Error Codes
+// ============================================
+
+export const GOAL_LINK_ERROR_CODES = {
+  ALREADY_LINKED: 'GOAL_ALREADY_LINKED',
+  PARENT_NOT_LONG_TERM: 'PARENT_NOT_LONG_TERM',
+  CHILD_NOT_SHORT_TERM: 'CHILD_NOT_SHORT_TERM',
+  GOAL_HAS_CHILDREN: 'GOAL_HAS_CHILDREN',
+  GOAL_HAS_PARENT: 'GOAL_HAS_PARENT',
+  GOAL_NOT_FOUND: 'GOAL_NOT_FOUND',
+  PARENT_NOT_FOUND: 'PARENT_NOT_FOUND',
+  TYPE_CHANGE_BLOCKED: 'TYPE_CHANGE_BLOCKED_HAS_PARENT',
+} as const;
+
+export type GoalLinkErrorCode = (typeof GOAL_LINK_ERROR_CODES)[keyof typeof GOAL_LINK_ERROR_CODES];
+
+export interface GoalLinkError {
+  code: GoalLinkErrorCode;
+  message: string;
+}
+
+export class GoalLinkValidationError extends Error {
+  code: GoalLinkErrorCode;
+
+  constructor(code: GoalLinkErrorCode, message: string) {
+    super(message);
+    this.code = code;
+    this.name = 'GoalLinkValidationError';
+  }
+}

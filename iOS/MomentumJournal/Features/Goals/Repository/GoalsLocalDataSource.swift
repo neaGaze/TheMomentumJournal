@@ -59,6 +59,7 @@ final class GoalsLocalDataSource {
         entity.targetDate = goal.targetDate
         entity.status = goal.status.rawValue
         entity.progressPercentage = Int16(goal.progressPercentage)
+        entity.parentGoalId = goal.parentGoalId
         entity.updatedAt = goal.updatedAt
         entity.lastSyncedAt = goal.lastSyncedAt
 
@@ -107,6 +108,34 @@ final class GoalsLocalDataSource {
 
     // MARK: - Conversion
 
+    // MARK: - Fetch Long-Term Goals
+
+    func fetchLongTermGoals(userId: UUID) throws -> [Goal] {
+        let request = GoalEntity.fetchRequest()
+        request.predicate = NSCompoundPredicate(andPredicateWithSubpredicates: [
+            NSPredicate(format: "userId == %@", userId as CVarArg),
+            NSPredicate(format: "type == %@", GoalType.longTerm.rawValue),
+            NSPredicate(format: "status == %@", GoalStatus.active.rawValue)
+        ])
+        request.sortDescriptors = [NSSortDescriptor(keyPath: \GoalEntity.title, ascending: true)]
+
+        let entities = try context.fetch(request)
+        return entities.compactMap { toGoal($0) }
+    }
+
+    // MARK: - Fetch Child Goals
+
+    func fetchChildGoals(parentId: UUID) throws -> [Goal] {
+        let request = GoalEntity.fetchRequest()
+        request.predicate = NSPredicate(format: "parentGoalId == %@", parentId as CVarArg)
+        request.sortDescriptors = [NSSortDescriptor(keyPath: \GoalEntity.updatedAt, ascending: false)]
+
+        let entities = try context.fetch(request)
+        return entities.compactMap { toGoal($0) }
+    }
+
+    // MARK: - Conversion
+
     private func toGoal(_ entity: GoalEntity) -> Goal? {
         guard let id = entity.id,
               let userId = entity.userId,
@@ -130,6 +159,7 @@ final class GoalsLocalDataSource {
             targetDate: entity.targetDate,
             status: status,
             progressPercentage: Int(entity.progressPercentage),
+            parentGoalId: entity.parentGoalId,
             createdAt: createdAt,
             updatedAt: updatedAt,
             lastSyncedAt: entity.lastSyncedAt

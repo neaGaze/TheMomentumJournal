@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
@@ -14,6 +14,19 @@ import {
 import { format } from 'date-fns'
 import { useToast } from '@/hooks/useToast'
 
+const ERROR_MESSAGES: Record<string, string> = {
+  GOAL_ALREADY_LINKED: 'This goal is already linked to a parent goal',
+  PARENT_NOT_LONG_TERM: 'Parent goal must be a long-term goal',
+  GOAL_HAS_CHILDREN: 'Cannot modify - this goal has linked short-term goals',
+  TYPE_CHANGE_BLOCKED_HAS_PARENT: 'Cannot change to long-term while linked to a parent goal',
+}
+
+const getErrorMessage = (error: { code?: string; message?: string } | string): string => {
+  if (typeof error === 'string') return error
+  if (error.code && ERROR_MESSAGES[error.code]) return ERROR_MESSAGES[error.code]
+  return error.message || 'An unexpected error occurred'
+}
+
 const editGoalSchema = z.object({
   title: z.string().min(1, 'Title is required').max(200, 'Title too long'),
   description: z.string().max(2000, 'Description too long').optional(),
@@ -22,6 +35,7 @@ const editGoalSchema = z.object({
   targetDate: z.string().optional(),
   status: z.enum(['active', 'completed', 'paused', 'abandoned'] as const),
   progressPercentage: z.number().min(0).max(100),
+  parentGoalId: z.string().optional(),
 })
 
 type EditGoalFormData = z.infer<typeof editGoalSchema>
@@ -40,6 +54,9 @@ export function EditGoalModal({
   onSuccess,
 }: EditGoalModalProps) {
   const { showToast } = useToast()
+  const [longTermGoals, setLongTermGoals] = useState<Goal[]>([])
+  const [loadingLongTermGoals, setLoadingLongTermGoals] = useState(false)
+
   const {
     register,
     handleSubmit,
@@ -52,6 +69,15 @@ export function EditGoalModal({
   })
 
   const progressValue = watch('progressPercentage', goal?.progressPercentage ?? 0)
+  const selectedType = watch('type')
+  const currentParentGoalId = watch('parentGoalId')
+
+  // Clear parentGoalId when changing type to long-term
+  useEffect(() => {
+    if (selectedType === 'long-term' && currentParentGoalId) {
+      setValue('parentGoalId', '')
+    }
+  }, [selectedType, currentParentGoalId, setValue])
 
   useEffect(() => {
     if (goal && isOpen) {
@@ -65,9 +91,27 @@ export function EditGoalModal({
           : '',
         status: goal.status,
         progressPercentage: goal.progressPercentage,
+        parentGoalId: goal.parentGoalId || '',
       })
     }
   }, [goal, isOpen, reset])
+
+  // Fetch long-term goals when modal opens
+  useEffect(() => {
+    if (isOpen) {
+      setLoadingLongTermGoals(true)
+      fetch('/api/goals/long-term')
+        .then((res) => res.json())
+        .then((result) => {
+          if (result.success && result.data) {
+            // Exclude current goal from list to prevent self-reference
+            setLongTermGoals(result.data.filter((g: Goal) => g.id !== goal?.id))
+          }
+        })
+        .catch((err) => console.error('Failed to fetch long-term goals:', err))
+        .finally(() => setLoadingLongTermGoals(false))
+    }
+  }, [isOpen])
 
   useEffect(() => {
     const handleEscape = (e: KeyboardEvent) => {
@@ -98,13 +142,15 @@ export function EditGoalModal({
           targetDate: data.targetDate || null,
           status: data.status,
           progressPercentage: data.progressPercentage,
+          parentGoalId: data.type === 'short-term' && data.parentGoalId ? data.parentGoalId : null,
         }),
       })
 
       const result = await response.json()
 
       if (!result.success) {
-        throw new Error(result.error?.message || 'Failed to update goal')
+        showToast(getErrorMessage(result.error), 'error')
+        return
       }
 
       showToast('Goal updated successfully', 'success')
@@ -112,7 +158,7 @@ export function EditGoalModal({
       onClose()
     } catch (error) {
       console.error('Update goal error:', error)
-      showToast(error instanceof Error ? error.message : 'Failed to update goal', 'error')
+      showToast('Failed to update goal', 'error')
     }
   }
 
@@ -283,6 +329,43 @@ export function EditGoalModal({
               <span>100%</span>
             </div>
           </div>
+
+          {/* Parent Goal - only for short-term goals */}
+          {selectedType === 'short-term' && (
+            <div>
+              <label
+                htmlFor="edit-parentGoalId"
+                className="block text-sm font-medium text-gray-700 mb-1"
+              >
+                Link to Long-Term Goal
+              </label>
+              <div className="relative">
+                <select
+                  id="edit-parentGoalId"
+                  {...register('parentGoalId')}
+                  disabled={loadingLongTermGoals}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white text-gray-900 disabled:bg-gray-100"
+                >
+                  <option value="">No parent goal</option>
+                  {longTermGoals.map((g) => (
+                    <option key={g.id} value={g.id}>
+                      {g.title}
+                    </option>
+                  ))}
+                </select>
+                {loadingLongTermGoals && (
+                  <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                    <div className="w-4 h-4 border-2 border-blue-600 border-t-transparent rounded-full animate-spin" />
+                  </div>
+                )}
+              </div>
+              {longTermGoals.length === 0 && !loadingLongTermGoals && (
+                <p className="mt-1 text-sm text-gray-500">
+                  No active long-term goals available
+                </p>
+              )}
+            </div>
+          )}
 
           <div className="flex gap-3 pt-4">
             <button

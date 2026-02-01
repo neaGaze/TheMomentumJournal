@@ -10,12 +10,24 @@ import Supabase
 final class GoalFormViewModel: ObservableObject {
     @Published var title = ""
     @Published var description = ""
-    @Published var type: GoalType = .shortTerm
+    @Published var type: GoalType = .shortTerm {
+        didSet {
+            // Clear parent when changing to long-term
+            if type == .longTerm {
+                selectedParentGoalId = nil
+            }
+        }
+    }
     @Published var category = ""
     @Published var targetDate: Date?
     @Published var hasTargetDate = false
     @Published var status: GoalStatus = .active
     @Published var progressPercentage: Double = 0
+
+    // Parent goal linking
+    @Published var selectedParentGoalId: UUID?
+    @Published var longTermGoals: [Goal] = []
+    @Published var isLoadingLongTermGoals = false
 
     @Published var isSaving = false
     @Published var errorMessage: String?
@@ -25,6 +37,22 @@ final class GoalFormViewModel: ObservableObject {
     private var existingGoal: Goal?
 
     var isEditing: Bool { existingGoal != nil }
+
+    /// Long-term goals excluding current goal (prevent self-linking)
+    var availableParentGoals: [Goal] {
+        longTermGoals.filter { $0.id != existingGoal?.id }
+    }
+
+    /// Currently selected parent goal
+    var selectedParentGoal: Goal? {
+        guard let parentId = selectedParentGoalId else { return nil }
+        return longTermGoals.first { $0.id == parentId }
+    }
+
+    /// Whether editing a goal that has a parent (type change blocked)
+    var hasParent: Bool {
+        existingGoal?.parentGoalId != nil
+    }
 
     init(repository: GoalsRepository = GoalsRepository(), goal: Goal? = nil) {
         self.repository = repository
@@ -39,6 +67,22 @@ final class GoalFormViewModel: ObservableObject {
             hasTargetDate = goal.targetDate != nil
             status = goal.status
             progressPercentage = Double(goal.progressPercentage)
+            selectedParentGoalId = goal.parentGoalId
+        }
+    }
+
+    // MARK: - Load Long-Term Goals
+
+    func loadLongTermGoals() async {
+        guard let userId = await getCurrentUserId() else { return }
+
+        isLoadingLongTermGoals = true
+        defer { isLoadingLongTermGoals = false }
+
+        do {
+            longTermGoals = try await repository.getLongTermGoals(userId: userId)
+        } catch {
+            print("Failed to load long-term goals: \(error)")
         }
     }
 
@@ -91,6 +135,7 @@ final class GoalFormViewModel: ObservableObject {
             targetDate: hasTargetDate ? targetDate : nil,
             status: status,
             progressPercentage: Int(progressPercentage),
+            parentGoalId: type == .shortTerm ? selectedParentGoalId : nil,
             createdAt: existingGoal?.createdAt ?? Date(),
             updatedAt: Date(),
             lastSyncedAt: nil

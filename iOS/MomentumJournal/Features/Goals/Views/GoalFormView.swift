@@ -39,15 +39,53 @@ struct GoalFormView: View {
                 }
 
                 // Type & Category Section
-                Section("Classification") {
+                Section {
                     Picker("Type", selection: $viewModel.type) {
                         ForEach(GoalType.allCases, id: \.self) { type in
                             Text(type.displayName).tag(type)
                         }
                     }
+                    .disabled(viewModel.hasParent)
 
                     TextField("Category (optional)", text: $viewModel.category)
                         .textInputAutocapitalization(.words)
+                } header: {
+                    Text("Classification")
+                } footer: {
+                    if viewModel.hasParent {
+                        Text("Type cannot be changed while linked to a parent goal")
+                            .foregroundColor(.secondary)
+                    }
+                }
+
+                // Parent Goal Section (only for short-term goals)
+                if viewModel.type == .shortTerm {
+                    Section {
+                        if viewModel.isLoadingLongTermGoals {
+                            HStack {
+                                ProgressView()
+                                    .scaleEffect(0.8)
+                                Text("Loading goals...")
+                                    .foregroundColor(.secondary)
+                            }
+                        } else if viewModel.availableParentGoals.isEmpty {
+                            Text("No long-term goals available")
+                                .foregroundColor(.secondary)
+                        } else {
+                            Picker("Link to Goal", selection: $viewModel.selectedParentGoalId) {
+                                Text("None").tag(nil as UUID?)
+                                ForEach(viewModel.availableParentGoals) { goal in
+                                    Text(goal.title).tag(goal.id as UUID?)
+                                }
+                            }
+                        }
+                    } header: {
+                        Text("Parent Goal")
+                    } footer: {
+                        if viewModel.selectedParentGoal != nil {
+                            Text("This short-term goal will be linked to the selected long-term goal")
+                        }
+                    }
                 }
 
                 // Target Date Section
@@ -129,6 +167,9 @@ struct GoalFormView: View {
                         .background(.regularMaterial)
                         .cornerRadius(12)
                 }
+            }
+            .task {
+                await viewModel.loadLongTermGoals()
             }
         }
     }

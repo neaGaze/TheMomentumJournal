@@ -147,4 +147,126 @@ final class GoalsRepository {
         }
         return nil
     }
+
+    // MARK: - Get Long-Term Goals (for linking)
+
+    func getLongTermGoals(userId: UUID) async throws -> [Goal] {
+        // Return cached data immediately
+        let cachedGoals = try localDataSource.fetchLongTermGoals(userId: userId)
+
+        // Fetch from network
+        do {
+            let networkGoals = try await networkDataSource.fetchLongTermGoals(userId: userId)
+
+            // Update cache
+            for var goal in networkGoals {
+                goal.lastSyncedAt = Date()
+                try localDataSource.save(goal)
+            }
+
+            return try localDataSource.fetchLongTermGoals(userId: userId)
+        } catch {
+            if !cachedGoals.isEmpty {
+                return cachedGoals
+            }
+            throw error
+        }
+    }
+
+    // MARK: - Link Goal
+
+    func linkGoal(_ goalId: UUID, toParent parentGoalId: UUID) async throws -> Goal {
+        // Update locally first
+        if var localGoal = try localDataSource.fetch(goalId) {
+            localGoal.parentGoalId = parentGoalId
+            localGoal.updatedAt = Date()
+            try localDataSource.save(localGoal)
+        }
+
+        // Sync to network
+        do {
+            var syncedGoal = try await networkDataSource.linkGoal(goalId, toParent: parentGoalId)
+            syncedGoal.lastSyncedAt = Date()
+            try localDataSource.save(syncedGoal)
+            return syncedGoal
+        } catch {
+            // Revert local change on error
+            if var localGoal = try localDataSource.fetch(goalId) {
+                localGoal.parentGoalId = nil
+                try localDataSource.save(localGoal)
+            }
+            throw error
+        }
+    }
+
+    // MARK: - Unlink Goal
+
+    func unlinkGoal(_ goalId: UUID) async throws -> Goal {
+        var originalParentId: UUID?
+
+        // Update locally first
+        if var localGoal = try localDataSource.fetch(goalId) {
+            originalParentId = localGoal.parentGoalId
+            localGoal.parentGoalId = nil
+            localGoal.updatedAt = Date()
+            try localDataSource.save(localGoal)
+        }
+
+        // Sync to network
+        do {
+            var syncedGoal = try await networkDataSource.unlinkGoal(goalId)
+            syncedGoal.lastSyncedAt = Date()
+            try localDataSource.save(syncedGoal)
+            return syncedGoal
+        } catch {
+            // Revert local change on error - always restore original parent
+            if var localGoal = try localDataSource.fetch(goalId) {
+                localGoal.parentGoalId = originalParentId
+                try localDataSource.save(localGoal)
+            }
+            throw error
+        }
+    }
+
+    // MARK: - Get Child Goals
+
+    func getChildGoals(parentId: UUID) async throws -> [Goal] {
+        let cachedGoals = try localDataSource.fetchChildGoals(parentId: parentId)
+
+        do {
+            let networkGoals = try await networkDataSource.fetchChildGoals(parentId: parentId)
+            for var goal in networkGoals {
+                goal.lastSyncedAt = Date()
+                try localDataSource.save(goal)
+            }
+            return try localDataSource.fetchChildGoals(parentId: parentId)
+        } catch {
+            if !cachedGoals.isEmpty {
+                return cachedGoals
+            }
+            throw error
+        }
+    }
+
+    // MARK: - Get Parent Goal
+
+    func getParentGoal(childId: UUID) async throws -> Goal? {
+        // Try local first
+        guard let localGoal = try localDataSource.fetch(childId) else {
+            return try await networkDataSource.fetchParentGoal(childId: childId)
+        }
+
+        // Early return if no parent
+        guard let parentId = localGoal.parentGoalId else {
+            return nil
+        }
+
+        // Try local parent
+        if let parentGoal = try localDataSource.fetch(parentId) {
+            return parentGoal
+        }
+
+        // Fetch from network
+        return try await networkDataSource.fetchParentGoal(childId: childId)
+    }
 }

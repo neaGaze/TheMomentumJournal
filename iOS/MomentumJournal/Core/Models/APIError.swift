@@ -15,6 +15,7 @@ enum APIError: Error, LocalizedError {
     case invalidURL
     case invalidResponse
     case httpError(Int)
+    case goalLinkingError(GoalLinkingErrorCode)
 
     var errorDescription: String? {
         switch self {
@@ -36,6 +37,8 @@ enum APIError: Error, LocalizedError {
             return "Invalid server response."
         case .httpError(let code):
             return "HTTP error: \(code)"
+        case .goalLinkingError(let code):
+            return code.localizedMessage
         }
     }
 }

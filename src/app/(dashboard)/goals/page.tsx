@@ -13,10 +13,11 @@ import { EmptyState } from '@/components/goals/EmptyState'
 import { CreateGoalModal } from '@/components/goals/CreateGoalModal'
 import { EditGoalModal } from '@/components/goals/EditGoalModal'
 import { DeleteGoalDialog } from '@/components/goals/DeleteGoalDialog'
+import { LinkGoalModal } from '@/components/goals/LinkGoalModal'
 
 type SortField = GoalSortOptions['field']
 type SortDirection = GoalSortOptions['direction']
-type ViewMode = 'grid' | 'list'
+type ViewMode = 'grid' | 'list' | 'hierarchy'
 
 interface GoalsApiResponse {
   success: boolean
@@ -42,7 +43,9 @@ export default function GoalsPage() {
   const [typeFilter, setTypeFilter] = useState<GoalType | ''>('')
   const [statusFilter, setStatusFilter] = useState<GoalStatus | ''>('')
   const [categoryFilter, setCategoryFilter] = useState('')
+  const [parentFilter, setParentFilter] = useState<string>('') // '' = all, 'none' = unlinked, uuid = specific parent
   const [categories, setCategories] = useState<string[]>([])
+  const [longTermGoals, setLongTermGoals] = useState<Goal[]>([])
 
   // Sort
   const [sortField, setSortField] = useState<SortField>('created_at')
@@ -60,6 +63,7 @@ export default function GoalsPage() {
   const [showCreateModal, setShowCreateModal] = useState(false)
   const [editingGoal, setEditingGoal] = useState<Goal | null>(null)
   const [deletingGoal, setDeletingGoal] = useState<Goal | null>(null)
+  const [linkingGoal, setLinkingGoal] = useState<Goal | null>(null)
 
   const fetchGoals = useCallback(async () => {
     setLoading(true)
@@ -76,6 +80,11 @@ export default function GoalsPage() {
       if (typeFilter) params.set('type', typeFilter)
       if (statusFilter) params.set('status', statusFilter)
       if (categoryFilter) params.set('category', categoryFilter)
+      if (parentFilter === 'none') {
+        params.set('hasParent', 'false')
+      } else if (parentFilter) {
+        params.set('parentGoalId', parentFilter)
+      }
 
       const response = await fetch(`/api/goals?${params.toString()}`)
       const result: GoalsApiResponse = await response.json()
@@ -108,7 +117,19 @@ export default function GoalsPage() {
     } finally {
       setLoading(false)
     }
-  }, [page, sortField, sortDir, search, typeFilter, statusFilter, categoryFilter])
+  }, [page, sortField, sortDir, search, typeFilter, statusFilter, categoryFilter, parentFilter])
+
+  // Fetch long-term goals for filter dropdown
+  useEffect(() => {
+    fetch('/api/goals/long-term')
+      .then((res) => res.json())
+      .then((result) => {
+        if (result.success && result.data) {
+          setLongTermGoals(result.data)
+        }
+      })
+      .catch((err) => console.error('Failed to fetch long-term goals:', err))
+  }, [])
 
   useEffect(() => {
     fetchGoals()
@@ -117,7 +138,7 @@ export default function GoalsPage() {
   // Reset to page 1 when filters change
   useEffect(() => {
     setPage(1)
-  }, [search, typeFilter, statusFilter, categoryFilter, sortField, sortDir])
+  }, [search, typeFilter, statusFilter, categoryFilter, parentFilter, sortField, sortDir])
 
   const handleSearch = (e: React.ChangeEvent<HTMLInputElement>) => {
     setSearch(e.target.value)
@@ -128,12 +149,13 @@ export default function GoalsPage() {
     setTypeFilter('')
     setStatusFilter('')
     setCategoryFilter('')
+    setParentFilter('')
     setSortField('created_at')
     setSortDir('desc')
   }
 
   const hasFilters =
-    search || typeFilter || statusFilter || categoryFilter
+    search || typeFilter || statusFilter || categoryFilter || parentFilter
 
   const handleCreateSuccess = () => {
     fetchGoals()
@@ -144,6 +166,10 @@ export default function GoalsPage() {
   }
 
   const handleDeleteSuccess = () => {
+    fetchGoals()
+  }
+
+  const handleLinkSuccess = () => {
     fetchGoals()
   }
 
@@ -253,6 +279,21 @@ export default function GoalsPage() {
               </select>
             )}
 
+            {/* Parent Goal Filter */}
+            <select
+              value={parentFilter}
+              onChange={(e) => setParentFilter(e.target.value)}
+              className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white text-gray-900 text-sm"
+            >
+              <option value="">All Linkage</option>
+              <option value="none">Unlinked Only</option>
+              {longTermGoals.map((g) => (
+                <option key={g.id} value={g.id}>
+                  Under: {g.title}
+                </option>
+              ))}
+            </select>
+
             {/* Sort */}
             <select
               value={`${sortField}-${sortDir}`}
@@ -324,6 +365,29 @@ export default function GoalsPage() {
                   />
                 </svg>
               </button>
+              <button
+                onClick={() => setViewMode('hierarchy')}
+                className={`p-2 ${
+                  viewMode === 'hierarchy'
+                    ? 'bg-blue-50 text-blue-600'
+                    : 'bg-white text-gray-600 hover:bg-gray-50'
+                }`}
+                aria-label="Hierarchy view"
+              >
+                <svg
+                  className="w-5 h-5"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"
+                  />
+                </svg>
+              </button>
             </div>
 
             {/* Clear Filters */}
@@ -353,6 +417,102 @@ export default function GoalsPage() {
           variant={hasFilters ? 'no-filtered-results' : 'no-goals'}
           onCreateGoal={() => setShowCreateModal(true)}
         />
+      ) : viewMode === 'hierarchy' ? (
+        <>
+          {/* Hierarchy View - respects all applied filters */}
+          <div className="space-y-6">
+            {/* Long-term goals with their children (only if long-term goals exist in filtered results) */}
+            {goals.filter((g) => g.type === 'long-term').length > 0 && (
+              <>
+                {goals
+                  .filter((g) => g.type === 'long-term')
+                  .map((longTermGoal) => {
+                    // Children are short-term goals linked to this parent that also pass filters
+                    const children = goals.filter(
+                      (g) => g.parentGoalId === longTermGoal.id && g.type === 'short-term'
+                    )
+                    return (
+                      <div key={longTermGoal.id} className="space-y-3">
+                        <GoalCard
+                          goal={longTermGoal}
+                          onEdit={(g) => setEditingGoal(g)}
+                          onDelete={(g) => setDeletingGoal(g)}
+                          onRefresh={fetchGoals}
+                        />
+                        {children.length > 0 && (
+                          <div className="ml-4 sm:ml-8 pl-4 border-l-2 border-indigo-200 space-y-3">
+                            {children.map((child) => (
+                              <GoalCard
+                                key={child.id}
+                                goal={child}
+                                onEdit={(g) => setEditingGoal(g)}
+                                onDelete={(g) => setDeletingGoal(g)}
+                                onLink={(g) => setLinkingGoal(g)}
+                                onRefresh={fetchGoals}
+                              />
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    )
+                  })}
+              </>
+            )}
+
+            {/* Linked short-term goals whose parent is not in filtered results */}
+            {(() => {
+              const longTermIds = new Set(goals.filter(g => g.type === 'long-term').map(g => g.id))
+              const orphanedLinked = goals.filter(
+                (g) => g.type === 'short-term' && g.parentGoalId && !longTermIds.has(g.parentGoalId)
+              )
+              if (orphanedLinked.length === 0) return null
+              return (
+                <div className="space-y-3">
+                  <h3 className="text-sm font-medium text-gray-500 uppercase tracking-wide px-1">
+                    Linked Short-term Goals (parent filtered out)
+                  </h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+                    {orphanedLinked.map((goal) => (
+                      <GoalCard
+                        key={goal.id}
+                        goal={goal}
+                        onEdit={(g) => setEditingGoal(g)}
+                        onDelete={(g) => setDeletingGoal(g)}
+                        onLink={(g) => setLinkingGoal(g)}
+                        onRefresh={fetchGoals}
+                      />
+                    ))}
+                  </div>
+                </div>
+              )
+            })()}
+
+            {/* Unlinked short-term goals */}
+            {goals.filter(
+              (g) => g.type === 'short-term' && !g.parentGoalId
+            ).length > 0 && (
+              <div className="space-y-3">
+                <h3 className="text-sm font-medium text-gray-500 uppercase tracking-wide px-1">
+                  Unlinked Short-term Goals
+                </h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+                  {goals
+                    .filter((g) => g.type === 'short-term' && !g.parentGoalId)
+                    .map((goal) => (
+                      <GoalCard
+                        key={goal.id}
+                        goal={goal}
+                        onEdit={(g) => setEditingGoal(g)}
+                        onDelete={(g) => setDeletingGoal(g)}
+                        onLink={(g) => setLinkingGoal(g)}
+                        onRefresh={fetchGoals}
+                      />
+                    ))}
+                </div>
+              </div>
+            )}
+          </div>
+        </>
       ) : (
         <>
           {/* Goals Grid/List */}
@@ -369,6 +529,8 @@ export default function GoalsPage() {
                 goal={goal}
                 onEdit={(g) => setEditingGoal(g)}
                 onDelete={(g) => setDeletingGoal(g)}
+                onLink={goal.type === 'short-term' ? (g) => setLinkingGoal(g) : undefined}
+                onRefresh={fetchGoals}
               />
             ))}
           </div>
@@ -441,6 +603,13 @@ export default function GoalsPage() {
         isOpen={!!deletingGoal}
         onClose={() => setDeletingGoal(null)}
         onSuccess={handleDeleteSuccess}
+      />
+
+      <LinkGoalModal
+        goal={linkingGoal}
+        isOpen={!!linkingGoal}
+        onClose={() => setLinkingGoal(null)}
+        onSuccess={handleLinkSuccess}
       />
     </div>
   )

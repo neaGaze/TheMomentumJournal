@@ -38,6 +38,7 @@ struct Goal: Codable, Identifiable, Equatable {
     var targetDate: Date?
     var status: GoalStatus
     var progressPercentage: Int
+    var parentGoalId: UUID?
     let createdAt: Date
     var updatedAt: Date
     var lastSyncedAt: Date?
@@ -52,6 +53,7 @@ struct Goal: Codable, Identifiable, Equatable {
         case targetDate = "target_date"
         case status
         case progressPercentage = "progress_percentage"
+        case parentGoalId = "parent_goal_id"
         case createdAt = "created_at"
         case updatedAt = "updated_at"
         case lastSyncedAt = "last_synced_at"
@@ -68,6 +70,7 @@ struct Goal: Codable, Identifiable, Equatable {
         targetDate: Date? = nil,
         status: GoalStatus = .active,
         progressPercentage: Int = 0,
+        parentGoalId: UUID? = nil,
         createdAt: Date = Date(),
         updatedAt: Date = Date(),
         lastSyncedAt: Date? = nil
@@ -81,6 +84,7 @@ struct Goal: Codable, Identifiable, Equatable {
         self.targetDate = targetDate
         self.status = status
         self.progressPercentage = min(100, max(0, progressPercentage))
+        self.parentGoalId = type == .longTerm ? nil : parentGoalId
         self.createdAt = createdAt
         self.updatedAt = updatedAt
         self.lastSyncedAt = lastSyncedAt
@@ -96,6 +100,7 @@ struct Goal: Codable, Identifiable, Equatable {
         category = try container.decodeIfPresent(String.self, forKey: .category)
         status = try container.decode(GoalStatus.self, forKey: .status)
         progressPercentage = try container.decode(Int.self, forKey: .progressPercentage)
+        parentGoalId = try container.decodeIfPresent(UUID.self, forKey: .parentGoalId)
         lastSyncedAt = try container.decodeIfPresent(Date.self, forKey: .lastSyncedAt)
 
         // Handle date decoding (ISO8601 string or Date)
@@ -128,6 +133,7 @@ struct Goal: Codable, Identifiable, Equatable {
         try container.encodeIfPresent(category, forKey: .category)
         try container.encode(status, forKey: .status)
         try container.encode(progressPercentage, forKey: .progressPercentage)
+        try container.encodeIfPresent(parentGoalId, forKey: .parentGoalId)
 
         let formatter = ISO8601DateFormatter()
         if let targetDate = targetDate {
@@ -135,5 +141,56 @@ struct Goal: Codable, Identifiable, Equatable {
         }
         try container.encode(formatter.string(from: createdAt), forKey: .createdAt)
         try container.encode(formatter.string(from: updatedAt), forKey: .updatedAt)
+    }
+
+    /// Returns true if this goal is linked to a parent long-term goal
+    var isLinked: Bool {
+        parentGoalId != nil
+    }
+}
+
+// MARK: - Goal Linking Types
+
+/// Response from GET /api/goals/{id}/link
+struct GoalLinksResponse: Codable {
+    let parentGoal: Goal?
+    let childGoals: [Goal]
+
+    enum CodingKeys: String, CodingKey {
+        case parentGoal = "parent_goal"
+        case childGoals = "child_goals"
+    }
+}
+
+/// Error codes for goal linking operations
+enum GoalLinkingErrorCode: String {
+    case goalAlreadyLinked = "GOAL_ALREADY_LINKED"
+    case parentNotLongTerm = "PARENT_NOT_LONG_TERM"
+    case goalHasChildren = "GOAL_HAS_CHILDREN"
+    case typeChangeBlocked = "TYPE_CHANGE_BLOCKED"
+    case selfLinkNotAllowed = "SELF_LINK_NOT_ALLOWED"
+    case goalNotFound = "GOAL_NOT_FOUND"
+    case parentNotFound = "PARENT_NOT_FOUND"
+    case childNotShortTerm = "CHILD_NOT_SHORT_TERM"
+
+    var localizedMessage: String {
+        switch self {
+        case .goalAlreadyLinked:
+            return "This goal is already linked to a parent goal"
+        case .parentNotLongTerm:
+            return "Parent goal must be a long-term goal"
+        case .goalHasChildren:
+            return "Cannot link - this goal has linked short-term goals"
+        case .typeChangeBlocked:
+            return "Cannot change goal type while linked to a parent goal"
+        case .selfLinkNotAllowed:
+            return "A goal cannot be linked to itself"
+        case .goalNotFound:
+            return "Goal not found"
+        case .parentNotFound:
+            return "Parent goal not found"
+        case .childNotShortTerm:
+            return "Only short-term goals can be linked to a parent"
+        }
     }
 }

@@ -27,7 +27,17 @@ const createGoalSchema = z.object({
   targetDate: dateOnlySchema.nullable().optional(),
   status: goalStatusSchema.optional(),
   progressPercentage: z.number().min(0).max(100).optional(),
-});
+  parentGoalId: z.string().uuid().nullable().optional(),
+}).refine(
+  (data) => {
+    // long-term goals cannot have a parent
+    if (data.type === 'long-term' && data.parentGoalId) {
+      return false;
+    }
+    return true;
+  },
+  { message: 'Long-term goals cannot have a parent goal' }
+);
 
 /**
  * GET /api/goals - List goals with filters/sort/pagination
@@ -63,6 +73,17 @@ export async function GET(request: NextRequest) {
     }
     if (category) filters.category = category;
     if (search) filters.search = search;
+
+    // Parent goal filter
+    const parentGoalId = searchParams.get('parentGoalId');
+    const hasParent = searchParams.get('hasParent');
+    if (parentGoalId === 'null') {
+      filters.parentGoalId = null; // Unlinked goals
+    } else if (parentGoalId && z.string().uuid().safeParse(parentGoalId).success) {
+      filters.parentGoalId = parentGoalId;
+    }
+    if (hasParent === 'true') filters.hasParent = true;
+    if (hasParent === 'false') filters.hasParent = false;
 
     // Parse sort
     let sort: GoalSortOptions | undefined;

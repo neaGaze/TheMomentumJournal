@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { createClient } from '@/lib/supabase/server';
 import { getGoalById, updateGoal, deleteGoal } from '@/lib/db/goals';
+import { GOAL_LINK_ERROR_CODES } from '@/types';
 
 // Validation schemas
 const goalTypeSchema = z.enum(['long-term', 'short-term']);
@@ -19,10 +20,21 @@ const updateGoalSchema = z
     targetDate: dateOnlySchema.nullable().optional(),
     status: goalStatusSchema.optional(),
     progressPercentage: z.number().min(0).max(100).optional(),
+    parentGoalId: z.string().uuid().nullable().optional(),
   })
   .refine((data) => Object.keys(data).length > 0, {
     message: 'At least one field required',
-  });
+  })
+  .refine(
+    (data) => {
+      // When updating type to long-term, parent must be null or not present
+      if (data.type === 'long-term' && data.parentGoalId !== undefined && data.parentGoalId !== null) {
+        return false;
+      }
+      return true;
+    },
+    { message: 'Long-term goals cannot have a parent goal' }
+  );
 
 const uuidSchema = z.string().uuid();
 
@@ -122,6 +134,25 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
         },
         { status: 400 }
       );
+    }
+
+    // Prevent type change from short-term to long-term if goal has parent
+    if (parsed.data.type === 'long-term') {
+      const existingGoal = await getGoalById(supabase, id, user.id);
+      if (existingGoal?.parentGoalId) {
+        return NextResponse.json(
+          {
+            success: false,
+            data: null,
+            error: {
+              message: 'Cannot change type to long-term while goal has a parent. Unlink first.',
+              code: GOAL_LINK_ERROR_CODES.TYPE_CHANGE_BLOCKED,
+              status: 400,
+            },
+          },
+          { status: 400 }
+        );
+      }
     }
 
     const goal = await updateGoal(supabase, id, user.id, parsed.data);

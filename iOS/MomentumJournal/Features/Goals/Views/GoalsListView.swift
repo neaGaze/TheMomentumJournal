@@ -10,6 +10,8 @@ struct GoalsListView: View {
     @State private var showingAddGoal = false
     @State private var selectedGoal: Goal?
     @State private var showingFilters = false
+    @State private var goalToLink: Goal?
+    @State private var linkingError: String?
 
     var body: some View {
         NavigationView {
@@ -39,6 +41,20 @@ struct GoalsListView: View {
             }
             .confirmationDialog("Filter Goals", isPresented: $showingFilters) {
                 filterOptions
+            }
+            .sheet(item: $goalToLink) { goal in
+                LinkGoalSheet(
+                    goal: goal,
+                    onLink: { parentId in
+                        try await viewModel.linkGoal(goal.id, toParent: parentId)
+                    },
+                    onDismiss: { goalToLink = nil }
+                )
+            }
+            .alert("Error", isPresented: .constant(linkingError != nil)) {
+                Button("OK") { linkingError = nil }
+            } message: {
+                Text(linkingError ?? "")
             }
             .refreshable {
                 await viewModel.loadGoals()
@@ -75,7 +91,7 @@ struct GoalsListView: View {
             if !activeGoals.isEmpty {
                 Section("Active") {
                     ForEach(activeGoals) { goal in
-                        GoalRow(goal: goal)
+                        GoalRow(goal: goal, allGoals: viewModel.goals)
                             .contentShape(Rectangle())
                             .onTapGesture {
                                 selectedGoal = goal
@@ -94,6 +110,25 @@ struct GoalsListView: View {
                                     Label("Edit", systemImage: "pencil")
                                 }
                                 .tint(.blue)
+
+                                // Link/Unlink action for short-term goals
+                                if goal.type == .shortTerm {
+                                    if goal.parentGoalId != nil {
+                                        Button {
+                                            Task { await unlinkGoal(goal) }
+                                        } label: {
+                                            Label("Unlink", systemImage: "link.badge.minus")
+                                        }
+                                        .tint(.orange)
+                                    } else {
+                                        Button {
+                                            goalToLink = goal
+                                        } label: {
+                                            Label("Link", systemImage: "link.badge.plus")
+                                        }
+                                        .tint(.purple)
+                                    }
+                                }
                             }
                     }
                 }
@@ -104,7 +139,7 @@ struct GoalsListView: View {
             if !completedGoals.isEmpty {
                 Section("Completed") {
                     ForEach(completedGoals) { goal in
-                        GoalRow(goal: goal)
+                        GoalRow(goal: goal, allGoals: viewModel.goals)
                             .contentShape(Rectangle())
                             .onTapGesture {
                                 selectedGoal = goal
@@ -125,7 +160,7 @@ struct GoalsListView: View {
             if !pausedGoals.isEmpty {
                 Section("Paused") {
                     ForEach(pausedGoals) { goal in
-                        GoalRow(goal: goal)
+                        GoalRow(goal: goal, allGoals: viewModel.goals)
                             .contentShape(Rectangle())
                             .onTapGesture {
                                 selectedGoal = goal
@@ -146,7 +181,7 @@ struct GoalsListView: View {
             if !abandonedGoals.isEmpty {
                 Section("Abandoned") {
                     ForEach(abandonedGoals) { goal in
-                        GoalRow(goal: goal)
+                        GoalRow(goal: goal, allGoals: viewModel.goals)
                             .contentShape(Rectangle())
                             .onTapGesture {
                                 selectedGoal = goal
@@ -163,6 +198,16 @@ struct GoalsListView: View {
             }
         }
         .listStyle(.insetGrouped)
+    }
+
+    // MARK: - Unlink Goal
+
+    private func unlinkGoal(_ goal: Goal) async {
+        do {
+            try await viewModel.unlinkGoal(goal.id)
+        } catch {
+            linkingError = error.localizedDescription
+        }
     }
 
     // MARK: - Empty View
@@ -259,6 +304,19 @@ struct GoalsListView: View {
 
 struct GoalRow: View {
     let goal: Goal
+    var allGoals: [Goal] = []
+
+    /// Parent goal name for linked short-term goals
+    private var parentGoalName: String? {
+        guard let parentId = goal.parentGoalId else { return nil }
+        return allGoals.first { $0.id == parentId }?.title
+    }
+
+    /// Child goals count for long-term goals
+    private var childGoalsCount: Int {
+        guard goal.type == .longTerm else { return 0 }
+        return allGoals.filter { $0.parentGoalId == goal.id }.count
+    }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
@@ -269,7 +327,39 @@ struct GoalRow: View {
 
                 Spacer()
 
-                typeTag
+                HStack(spacing: 4) {
+                    // Linked indicator
+                    if goal.type == .shortTerm && goal.parentGoalId != nil {
+                        Image(systemName: "link")
+                            .font(.caption2)
+                            .foregroundColor(.indigo)
+                    }
+
+                    // Child count for long-term
+                    if goal.type == .longTerm && childGoalsCount > 0 {
+                        HStack(spacing: 2) {
+                            Image(systemName: "link")
+                                .font(.caption2)
+                            Text("\(childGoalsCount)")
+                                .font(.caption2)
+                        }
+                        .foregroundColor(.purple)
+                    }
+
+                    typeTag
+                }
+            }
+
+            // Show parent goal name for short-term goals
+            if let parentName = parentGoalName {
+                HStack(spacing: 4) {
+                    Image(systemName: "arrow.turn.up.right")
+                        .font(.caption2)
+                    Text(parentName)
+                        .font(.caption)
+                        .lineLimit(1)
+                }
+                .foregroundColor(.indigo)
             }
 
             if let description = goal.description, !description.isEmpty {

@@ -1,10 +1,10 @@
 'use client'
 
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
-import type { GoalType } from '@/types'
+import type { Goal, GoalType } from '@/types'
 import { GOAL_TYPES, GOAL_TYPE_LABELS } from '@/types'
 import { useToast } from '@/hooks/useToast'
 
@@ -14,6 +14,7 @@ const createGoalSchema = z.object({
   type: z.enum(['long-term', 'short-term'] as const),
   category: z.string().max(50, 'Category too long').optional(),
   targetDate: z.string().optional(),
+  parentGoalId: z.string().optional(),
 })
 
 type CreateGoalFormData = z.infer<typeof createGoalSchema>
@@ -30,23 +31,46 @@ export function CreateGoalModal({
   onSuccess,
 }: CreateGoalModalProps) {
   const { showToast } = useToast()
+  const [longTermGoals, setLongTermGoals] = useState<Goal[]>([])
+  const [loadingLongTermGoals, setLoadingLongTermGoals] = useState(false)
+
   const {
     register,
     handleSubmit,
     reset,
+    watch,
     formState: { errors, isSubmitting },
   } = useForm<CreateGoalFormData>({
     resolver: zodResolver(createGoalSchema),
     defaultValues: {
       type: 'short-term',
+      parentGoalId: '',
     },
   })
+
+  const selectedType = watch('type')
 
   useEffect(() => {
     if (!isOpen) {
       reset()
     }
   }, [isOpen, reset])
+
+  // Fetch long-term goals when modal opens
+  useEffect(() => {
+    if (isOpen) {
+      setLoadingLongTermGoals(true)
+      fetch('/api/goals/long-term')
+        .then((res) => res.json())
+        .then((result) => {
+          if (result.success && result.data) {
+            setLongTermGoals(result.data)
+          }
+        })
+        .catch((err) => console.error('Failed to fetch long-term goals:', err))
+        .finally(() => setLoadingLongTermGoals(false))
+    }
+  }, [isOpen])
 
   useEffect(() => {
     const handleEscape = (e: KeyboardEvent) => {
@@ -73,6 +97,7 @@ export function CreateGoalModal({
           type: data.type,
           category: data.category || null,
           targetDate: data.targetDate || null,
+          parentGoalId: data.type === 'short-term' && data.parentGoalId ? data.parentGoalId : null,
         }),
       })
 
@@ -230,6 +255,43 @@ export function CreateGoalModal({
               </p>
             )}
           </div>
+
+          {/* Parent Goal - only for short-term goals */}
+          {selectedType === 'short-term' && (
+            <div>
+              <label
+                htmlFor="parentGoalId"
+                className="block text-sm font-medium text-gray-700 mb-1"
+              >
+                Link to Long-Term Goal
+              </label>
+              <div className="relative">
+                <select
+                  id="parentGoalId"
+                  {...register('parentGoalId')}
+                  disabled={loadingLongTermGoals}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white text-gray-900 disabled:bg-gray-100"
+                >
+                  <option value="">No parent goal</option>
+                  {longTermGoals.map((goal) => (
+                    <option key={goal.id} value={goal.id}>
+                      {goal.title}
+                    </option>
+                  ))}
+                </select>
+                {loadingLongTermGoals && (
+                  <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                    <div className="w-4 h-4 border-2 border-blue-600 border-t-transparent rounded-full animate-spin" />
+                  </div>
+                )}
+              </div>
+              {longTermGoals.length === 0 && !loadingLongTermGoals && (
+                <p className="mt-1 text-sm text-gray-500">
+                  No active long-term goals available
+                </p>
+              )}
+            </div>
+          )}
 
           <div className="flex gap-3 pt-4">
             <button

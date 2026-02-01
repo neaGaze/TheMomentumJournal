@@ -105,6 +105,7 @@ export interface GoalRow {
   target_date: string | null;
   status: GoalStatus;
   progress_percentage: number;
+  parent_goal_id: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -119,6 +120,7 @@ export interface GoalInsert {
   target_date?: string | null;
   status?: GoalStatus;
   progress_percentage?: number;
+  parent_goal_id?: string | null;
   created_at?: string;
   updated_at?: string;
 }
@@ -133,6 +135,7 @@ export interface GoalUpdate {
   target_date?: string | null;
   status?: GoalStatus;
   progress_percentage?: number;
+  parent_goal_id?: string | null;
   updated_at?: string;
 }
 

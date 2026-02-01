@@ -19,6 +19,11 @@ struct LoginView: View {
 
                 // Logo/Title
                 VStack(spacing: 8) {
+                    Image("Logo")
+                        .resizable()
+                        .aspectRatio(contentMode: .fit)
+                        .frame(width: 100, height: 100)
+
                     Text("Momentum Journal")
                         .font(.largeTitle)
                         .fontWeight(.bold)

@@ -1,6 +1,7 @@
 'use client'
 
 import Link from 'next/link'
+import Image from 'next/image'
 import { usePathname } from 'next/navigation'
 import { useState } from 'react'
 import { useAuth } from '@/hooks/use-auth'
@@ -92,13 +93,18 @@ export function Sidebar({ userEmail }: SidebarProps) {
         <div className="flex flex-col h-full">
           {/* Logo */}
           <div className="p-6 border-b border-gray-200">
-            <Link href="/dashboard" className="flex items-center gap-2">
-              <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center">
-                <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
-                </svg>
-              </div>
-              <span className="font-bold text-lg">Momentum</span>
+            <Link href="/dashboard" className="flex items-center gap-3">
+              <Image
+                src="/logo.svg"
+                alt="Momentum Journal Logo"
+                width={40}
+                height={40}
+                className="w-10 h-10 flex-shrink-0"
+                priority
+              />
+              <span className="font-bold text-lg bg-gradient-to-r from-indigo-500 to-purple-500 bg-clip-text text-transparent">
+                Momentum
+              </span>
             </Link>
           </div>
 

@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		A1000001230100 /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = A1000001130100 /* LaunchScreen.storyboard */; };
 		A1000001230001 /* MomentumJournalApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000001130001 /* MomentumJournalApp.swift */; };
 		A1000001230002 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000001130002 /* ContentView.swift */; };
 		A1000001230003 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = A1000001130003 /* Assets.xcassets */; };
@@ -75,6 +76,7 @@
 		A1000001130005 /* Persistence.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Persistence.swift; sourceTree = "<group>"; };
 		A1000001130007 /* Config.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Config.swift; sourceTree = "<group>"; };
 		A1000001130008 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		A1000001130100 /* LaunchScreen.storyboard */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; path = LaunchScreen.storyboard; sourceTree = "<group>"; };
 		A1000001130009 /* MomentumJournal.xcdatamodel */ = {isa = PBXFileReference; lastKnownFileType = wrapper.xcdatamodel; path = MomentumJournal.xcdatamodel; sourceTree = "<group>"; };
 		A1000001130010 /* KeychainService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KeychainService.swift; sourceTree = "<group>"; };
 		A1000001130011 /* SupabaseClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SupabaseClient.swift; sourceTree = "<group>"; };
@@ -160,6 +162,7 @@
 				A1000001130006 /* MomentumJournal.xcdatamodeld */,
 				A1000001130003 /* Assets.xcassets */,
 				A1000001130008 /* Info.plist */,
+				A1000001130100 /* LaunchScreen.storyboard */,
 				A1000001150004 /* Preview Content */,
 			);
 			path = MomentumJournal;
@@ -526,6 +529,7 @@
 			files = (
 				A1000001230004 /* Preview Assets.xcassets in Resources */,
 				A1000001230003 /* Assets.xcassets in Resources */,
+				A1000001230100 /* LaunchScreen.storyboard in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -728,7 +732,7 @@
 				INFOPLIST_FILE = MomentumJournal/Info.plist;
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
-				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
+				INFOPLIST_KEY_UILaunchStoryboardName = LaunchScreen;
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -758,7 +762,7 @@
 				INFOPLIST_FILE = MomentumJournal/Info.plist;
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
-				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
+				INFOPLIST_KEY_UILaunchStoryboardName = LaunchScreen;
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
 				LD_RUNPATH_SEARCH_PATHS = (

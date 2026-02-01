@@ -139,19 +139,19 @@ src/
 - [x] Protected routes
 
 ### Phase 3: Goals CRUD
-- [ ] Create/edit/delete goals
-- [ ] Progress tracking
-- [ ] Filter by type/status
+- [x] Create/edit/delete goals
+- [x] Progress tracking
+- [x] Filter by type/status
 
 ### Phase 4: Journal CRUD
-- [ ] Markdown editor
-- [ ] Mood tracking
-- [ ] Tag system
+- [x] Markdown editor
+- [x] Mood tracking
+- [x] Tag system
 
 ### Phase 5: Dashboard
-- [ ] Overview page
-- [ ] Sidebar navigation
-- [ ] Stats cards
+- [x] Overview page
+- [x] Sidebar navigation
+- [x] Stats cards
 
 ### Phase 6: AI Analysis
 - [ ] On-demand analysis

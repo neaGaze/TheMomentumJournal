@@ -6,6 +6,14 @@
 import Foundation
 import Supabase
 
+/// Encodable null value for Supabase updates
+private struct JSONNull: Encodable {
+    func encode(to encoder: Encoder) throws {
+        var container = encoder.singleValueContainer()
+        try container.encodeNil()
+    }
+}
+
 final class GoalsNetworkDataSource {
     private var supabase: SupabaseClient {
         SupabaseClientManager.shared.client
@@ -145,7 +153,7 @@ final class GoalsNetworkDataSource {
         do {
             let updated: Goal = try await supabase
                 .from("goals")
-                .update(["parent_goal_id": NSNull()])
+                .update(["parent_goal_id": JSONNull()])
                 .eq("id", value: goalId.uuidString)
                 .select()
                 .single()

@@ -430,3 +430,30 @@ export async function getLongTermGoals(
 
   return (data ?? []).map(mapGoal);
 }
+
+/**
+ * Get short-term goals with target_date within a date range
+ * Used by dashboard to show goals due in the current week/month
+ */
+export async function getGoalsByDeadline(
+  supabase: SupabaseClientAny,
+  userId: string,
+  startDate: string,
+  endDate: string
+): Promise<Goal[]> {
+  const { data, error } = await supabase
+    .from('goals')
+    .select('*')
+    .eq('user_id', userId)
+    .eq('type', 'short-term')
+    .not('target_date', 'is', null)
+    .gte('target_date', startDate)
+    .lte('target_date', endDate)
+    .order('target_date', { ascending: true });
+
+  if (error) {
+    throw new Error(`Failed to fetch goals by deadline: ${error.message}`);
+  }
+
+  return (data ?? []).map(mapGoal);
+}

@@ -16,27 +16,47 @@ import { RecentActivityFeed } from '@/components/dashboard/RecentActivityFeed'
 import { QuickActions } from '@/components/dashboard/QuickActions'
 import { TimelineSelector } from '@/components/dashboard/TimelineSelector'
 import { ActivityHeatmap } from '@/components/dashboard/ActivityHeatmap'
+import { DeadlineGoals } from '@/components/dashboard/DeadlineGoals'
+import type { Goal } from '@/types'
+
+interface DeadlineGoalsData {
+  goals: Goal[]
+  startDate: string
+  endDate: string
+}
 
 interface DashboardData {
   stats: DashboardStats | null
   progress: ProgressDataPoint[]
   goalHeatmap: GoalActivityHeatMapResult | null
+  deadlineGoals: DeadlineGoalsData | null
 }
 
 export default function DashboardPage() {
   const [timeline, setTimeline] = useState<Timeline>('week')
-  const [data, setData] = useState<DashboardData>({ stats: null, progress: [], goalHeatmap: null })
+  const [data, setData] = useState<DashboardData>({ stats: null, progress: [], goalHeatmap: null, deadlineGoals: null })
   const [loading, setLoading] = useState(true)
   const { showToast } = useToast()
 
   const fetchDashboardData = useCallback(async (selectedTimeline: Timeline) => {
     setLoading(true)
     try {
-      const [statsRes, progressRes, goalHeatmapRes] = await Promise.all([
+      const fetches: Promise<Response>[] = [
         fetch(`/api/dashboard/stats?timeline=${selectedTimeline}&limit=10`),
         fetch(`/api/dashboard/progress?timeline=${selectedTimeline}`),
         fetch(`/api/dashboard/goal-heatmap?timeline=${selectedTimeline}`),
-      ])
+      ]
+
+      // Only fetch deadline goals for week/month views
+      const showDeadlineGoals = selectedTimeline === 'week' || selectedTimeline === 'month'
+      if (showDeadlineGoals) {
+        fetches.push(fetch(`/api/dashboard/deadline-goals?timeline=${selectedTimeline}`))
+      }
+
+      const responses = await Promise.all(fetches)
+
+      const [statsRes, progressRes, goalHeatmapRes] = responses
+      const deadlineGoalsRes = showDeadlineGoals ? responses[3] : null
 
       if (!statsRes.ok || !progressRes.ok || !goalHeatmapRes.ok) {
         throw new Error('Failed to fetch dashboard data')
@@ -58,10 +78,23 @@ export default function DashboardPage() {
         throw new Error(goalHeatmapJson.error?.message || 'Failed to fetch goal heatmap')
       }
 
+      let deadlineGoals: DeadlineGoalsData | null = null
+      if (deadlineGoalsRes) {
+        const deadlineJson = await deadlineGoalsRes.json()
+        if (deadlineJson.success && deadlineJson.data) {
+          deadlineGoals = {
+            goals: deadlineJson.data.goals,
+            startDate: deadlineJson.data.startDate,
+            endDate: deadlineJson.data.endDate,
+          }
+        }
+      }
+
       setData({
         stats: statsJson.data,
         progress: progressJson.data?.points || [],
         goalHeatmap: goalHeatmapJson.data,
+        deadlineGoals,
       })
     } catch (error) {
       console.error('Dashboard fetch error:', error)
@@ -79,9 +112,10 @@ export default function DashboardPage() {
     setTimeline(newTimeline)
   }
 
-  const { stats, progress, goalHeatmap } = data
+  const { stats, progress, goalHeatmap, deadlineGoals } = data
   const goalsStats = stats?.goals
   const journalStats = stats?.journals
+  const showDeadlineGoals = timeline === 'week' || timeline === 'month'
 
   return (
     <div className="p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto">
@@ -147,6 +181,19 @@ export default function DashboardPage() {
           loading={loading}
         />
       </div>
+
+      {/* Deadline Goals (week/month only) */}
+      {showDeadlineGoals && (
+        <div className="mb-6 sm:mb-8">
+          <DeadlineGoals
+            goals={deadlineGoals?.goals ?? []}
+            timeline={timeline}
+            loading={loading}
+            startDate={deadlineGoals?.startDate}
+            endDate={deadlineGoals?.endDate}
+          />
+        </div>
+      )}
 
       {/* Charts and Activity */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 sm:gap-8 mb-6 sm:mb-8">

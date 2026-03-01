@@ -4,7 +4,6 @@ import { useEffect, useState } from 'react'
 import { useForm, Controller } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
-import { format } from 'date-fns'
 import type { JournalEntry, Mood, Goal } from '@/types'
 import { useToast } from '@/hooks/useToast'
 import { MoodSelector } from './MoodSelector'
@@ -57,7 +56,7 @@ export function EditJournalModal({
       reset({
         title: entry.title || '',
         content: entry.content,
-        entryDate: format(entry.entryDate, 'yyyy-MM-dd'),
+        entryDate: entry.entryDate,
         mood: entry.mood as Mood | null,
       })
       setSelectedGoalIds(linkedGoals.map((g) => g.id))

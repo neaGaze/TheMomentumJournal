@@ -170,7 +170,7 @@ export async function getContextForWeeklyInsights(
     startDate.setMonth(now.getMonth() - 1);
   }
 
-  const startDateStr = startDate.toISOString().split('T')[0];
+  const startDateStr = startDate.toLocaleDateString('en-CA');
 
   // Fetch journals in range
   const { data: journalsData } = await supabase
@@ -242,19 +242,19 @@ function calculateStreak(journals: JournalEntry[]): number {
 
   // Sort by date descending
   const sorted = [...journals].sort(
-    (a, b) => b.entryDate.getTime() - a.entryDate.getTime()
+    (a, b) => b.entryDate.localeCompare(a.entryDate)
   );
 
   // Get unique dates
   const uniqueDates = new Set<string>();
   for (const j of sorted) {
-    uniqueDates.add(j.entryDate.toISOString().split('T')[0]);
+    uniqueDates.add(j.entryDate);
   }
 
   const dates = Array.from(uniqueDates).sort().reverse();
 
-  const today = new Date().toISOString().split('T')[0];
-  const yesterday = new Date(Date.now() - 86400000).toISOString().split('T')[0];
+  const today = new Date().toLocaleDateString('en-CA');
+  const yesterday = new Date(Date.now() - 86400000).toLocaleDateString('en-CA');
 
   // Streak must start from today or yesterday
   if (dates[0] !== today && dates[0] !== yesterday) {

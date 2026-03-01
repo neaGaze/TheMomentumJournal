@@ -11,6 +11,17 @@ import { mapGoalFromRow as mapGoal, mapJournalEntryFromRow as mapJournal } from 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type SupabaseClientAny = SupabaseClient<any, any, any>;
 
+/** Format a Date as YYYY-MM-DD using local timezone */
+function toLocalDateStr(d: Date): string {
+  return d.toLocaleDateString('en-CA');
+}
+
+/** Parse YYYY-MM-DD string to Date in local timezone (noon to avoid DST edge cases) */
+function parseLocalDate(dateStr: string): Date {
+  const [y, m, d] = dateStr.split('-').map(Number);
+  return new Date(y, m - 1, d, 12, 0, 0);
+}
+
 export type Timeline = 'week' | 'month' | 'year';
 
 // ============================================
@@ -58,7 +69,7 @@ export interface RecentActivityItem {
   progressPercentage?: number;
   // Journal-specific
   mood?: Mood | null;
-  entryDate?: Date;
+  entryDate?: string;
 }
 
 export interface ProgressDataPoint {
@@ -92,24 +103,24 @@ function getWeekStart(date: Date): Date {
  */
 function getDateRange(timeline: Timeline): { startDate: string; endDate: string } {
   const now = new Date();
-  const endDate = now.toISOString().split('T')[0];
+  const endDate = toLocalDateStr(now);
   let startDate: string;
 
   switch (timeline) {
     case 'week':
       // Use ISO week start (Monday) to align with component's date display
       const weekStart = getWeekStart(now);
-      startDate = weekStart.toISOString().split('T')[0];
+      startDate = toLocalDateStr(weekStart);
       break;
     case 'month':
       const monthAgo = new Date(now);
       monthAgo.setMonth(monthAgo.getMonth() - 1);
-      startDate = monthAgo.toISOString().split('T')[0];
+      startDate = toLocalDateStr(monthAgo);
       break;
     case 'year':
       const yearAgo = new Date(now);
       yearAgo.setFullYear(yearAgo.getFullYear() - 1);
-      startDate = yearAgo.toISOString().split('T')[0];
+      startDate = toLocalDateStr(yearAgo);
       break;
   }
 
@@ -140,14 +151,16 @@ function calculateStreaks(entries: { entry_date: string }[]): {
   let tempStreak = 1;
 
   // Check if today or yesterday has entry (for current streak)
-  const today = new Date().toISOString().split('T')[0];
-  const yesterday = new Date(Date.now() - 86400000).toISOString().split('T')[0];
+  const today = toLocalDateStr(new Date());
+  const yesterdayDate = new Date();
+  yesterdayDate.setDate(yesterdayDate.getDate() - 1);
+  const yesterday = toLocalDateStr(yesterdayDate);
   const hasRecentEntry = uniqueDates[0] === today || uniqueDates[0] === yesterday;
 
   for (let i = 0; i < uniqueDates.length - 1; i++) {
-    const current = new Date(uniqueDates[i]);
-    const next = new Date(uniqueDates[i + 1]);
-    const diffDays = (current.getTime() - next.getTime()) / 86400000;
+    const current = parseLocalDate(uniqueDates[i]);
+    const next = parseLocalDate(uniqueDates[i + 1]);
+    const diffDays = Math.round((current.getTime() - next.getTime()) / 86400000);
 
     if (diffDays === 1) {
       tempStreak++;
@@ -162,9 +175,9 @@ function calculateStreaks(entries: { entry_date: string }[]): {
   if (hasRecentEntry) {
     currentStreak = 1;
     for (let i = 0; i < uniqueDates.length - 1; i++) {
-      const current = new Date(uniqueDates[i]);
-      const next = new Date(uniqueDates[i + 1]);
-      const diffDays = (current.getTime() - next.getTime()) / 86400000;
+      const current = parseLocalDate(uniqueDates[i]);
+      const next = parseLocalDate(uniqueDates[i + 1]);
+      const diffDays = Math.round((current.getTime() - next.getTime()) / 86400000);
       if (diffDays === 1) {
         currentStreak++;
       } else {
@@ -362,7 +375,7 @@ export async function getRecentActivity(
     createdAt: new Date(j.created_at),
     updatedAt: new Date(j.updated_at),
     mood: j.mood as Mood | null,
-    entryDate: new Date(j.entry_date),
+    entryDate: j.entry_date,
   }));
 
   // Combine and sort by updatedAt
@@ -410,9 +423,6 @@ export async function getGoalsProgressOverTime(
 
   // Generate date points based on timeline
   const points: ProgressDataPoint[] = [];
-  const start = new Date(startDate);
-  const end = new Date(endDate);
-
   // Determine interval
   let interval: 'day' | 'week' | 'month';
   switch (timeline) {
@@ -431,9 +441,10 @@ export async function getGoalsProgressOverTime(
   }
 
   // Generate date points
-  const current = new Date(start);
-  while (current <= end) {
-    const dateStr = current.toISOString().split('T')[0];
+  const current = parseLocalDate(startDate);
+  const endLocal = parseLocalDate(endDate);
+  while (current <= endLocal) {
+    const dateStr = toLocalDateStr(current);
     const nextDate = new Date(current);
 
     switch (interval) {
@@ -448,7 +459,7 @@ export async function getGoalsProgressOverTime(
         break;
     }
 
-    const nextDateStr = nextDate.toISOString().split('T')[0];
+    const nextDateStr = toLocalDateStr(nextDate);
 
     // Count goals by status up to this date
     const goalsUpToDate = goals.filter(

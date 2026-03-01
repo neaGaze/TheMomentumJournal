@@ -44,7 +44,7 @@ export function CreateJournalModal({
   } = useForm<CreateJournalFormData>({
     resolver: zodResolver(createJournalSchema),
     defaultValues: {
-      entryDate: new Date().toISOString().split('T')[0],
+      entryDate: new Date().toLocaleDateString('en-CA'),
       mood: null,
     },
   })
@@ -56,7 +56,7 @@ export function CreateJournalModal({
       reset({
         title: '',
         content: '',
-        entryDate: new Date().toISOString().split('T')[0],
+        entryDate: new Date().toLocaleDateString('en-CA'),
         mood: null,
       })
       setSelectedGoalIds([])

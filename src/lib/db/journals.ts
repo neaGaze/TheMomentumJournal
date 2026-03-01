@@ -192,7 +192,7 @@ export async function createJournalEntry(
     user_id: userId,
     title: input.title ?? null,
     content: input.content,
-    entry_date: input.entryDate ?? new Date().toISOString().split('T')[0],
+    entry_date: input.entryDate ?? new Date().toLocaleDateString('en-CA'),
     mood: input.mood ?? null,
     tags: input.tags ?? [],
   };

@@ -160,7 +160,7 @@ export async function analyzeGoalProgress(
 
   const journalsContext = relatedJournals.length > 0
     ? `Related journal entries (${relatedJournals.length}):\n${relatedJournals.map(j =>
-        `[${j.entryDate.toISOString().split('T')[0]}] ${j.mood ? `(${j.mood})` : ''} ${j.content.slice(0, 200)}...`
+        `[${j.entryDate}] ${j.mood ? `(${j.mood})` : ''} ${j.content.slice(0, 200)}...`
       ).join('\n\n')}`
     : 'No related journal entries.';
 
@@ -257,7 +257,7 @@ export async function generateWeeklyInsights(
 
   const journalsContext = journals.length > 0
     ? `Journal entries this period (${journals.length}):\n${journals.map(j =>
-        `[${j.entryDate.toISOString().split('T')[0]}] Mood: ${j.mood ?? 'none'}\n${j.content.slice(0, 150)}...`
+        `[${j.entryDate}] Mood: ${j.mood ?? 'none'}\n${j.content.slice(0, 150)}...`
       ).join('\n\n')}`
     : 'No journal entries this period.';
 

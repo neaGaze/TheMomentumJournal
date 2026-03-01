@@ -68,7 +68,7 @@ export interface JournalEntry {
   userId: string;
   title: string | null;
   content: string;
-  entryDate: Date;
+  entryDate: string; // YYYY-MM-DD date-only string, no timezone conversion
   mood: Mood | null;
   tags: string[];
   createdAt: Date;
@@ -314,7 +314,7 @@ export function mapJournalEntryFromRow(row: JournalEntryRow): JournalEntry {
     userId: row.user_id,
     title: row.title,
     content: row.content,
-    entryDate: new Date(row.entry_date),
+    entryDate: row.entry_date,
     mood: row.mood as Mood | null,
     tags: row.tags ?? [],
     createdAt: new Date(row.created_at),

@@ -25,7 +25,15 @@ export function JournalEntryCard({
 }: JournalEntryCardProps) {
   const [expanded, setExpanded] = useState(false)
 
-  const formatDate = (date: Date) => {
+  const formatDate = (date: Date | string) => {
+    if (typeof date === 'string') {
+      // YYYY-MM-DD only — parse without timezone shift
+      if (/^\d{4}-\d{2}-\d{2}$/.test(date)) {
+        const [y, m, d] = date.split('-').map(Number)
+        return format(new Date(y, m - 1, d), 'MMM d, yyyy')
+      }
+      return format(new Date(date), 'MMM d, yyyy')
+    }
     return format(date, 'MMM d, yyyy')
   }
 

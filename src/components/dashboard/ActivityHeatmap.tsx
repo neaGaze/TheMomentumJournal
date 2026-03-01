@@ -36,7 +36,7 @@ function getWeekStart(date: Date): Date {
  * Format date as YYYY-MM-DD
  */
 function formatDate(date: Date): string {
-  return date.toISOString().split('T')[0]
+  return date.toLocaleDateString('en-CA')
 }
 
 /**

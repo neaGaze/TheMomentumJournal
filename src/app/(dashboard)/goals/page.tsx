@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useState, useCallback, useMemo } from 'react'
 import type { Goal, GoalType, GoalStatus, GoalSortOptions } from '@/types'
 import {
   GOAL_TYPES,
@@ -33,10 +33,23 @@ interface GoalsApiResponse {
   error: { message: string } | null
 }
 
+// Hierarchy group type: a top-level unit for client-side pagination
+interface HierarchyGroup {
+  type: 'long-term-group' | 'unlinked-short-term'
+  parent?: Goal
+  children: Goal[]
+}
+
+const HIERARCHY_GROUPS_PER_PAGE = 5
+
 export default function GoalsPage() {
   const [goals, setGoals] = useState<Goal[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+
+  // Hierarchy view: all goals fetched at once for client-side group pagination
+  const [allGoalsForHierarchy, setAllGoalsForHierarchy] = useState<Goal[]>([])
+  const [hierarchyPage, setHierarchyPage] = useState(1)
 
   // Filters
   const [search, setSearch] = useState('')
@@ -54,7 +67,7 @@ export default function GoalsPage() {
   // View mode
   const [viewMode, setViewMode] = useState<ViewMode>('grid')
 
-  // Pagination
+  // Pagination (for grid/list views)
   const [page, setPage] = useState(1)
   const [totalPages, setTotalPages] = useState(1)
   const [totalCount, setTotalCount] = useState(0)
@@ -65,26 +78,91 @@ export default function GoalsPage() {
   const [deletingGoal, setDeletingGoal] = useState<Goal | null>(null)
   const [linkingGoal, setLinkingGoal] = useState<Goal | null>(null)
 
+  // Build hierarchy groups from all goals
+  const buildHierarchyGroups = useCallback((allGoals: Goal[]): HierarchyGroup[] => {
+    const groups: HierarchyGroup[] = []
+    const longTermGoalsList = allGoals.filter((g) => g.type === 'long-term')
+    const shortTermGoalsList = allGoals.filter((g) => g.type === 'short-term')
+    const childrenByParent = new Map<string, Goal[]>()
+
+    // Index short-term goals by their parent
+    shortTermGoalsList.forEach((g) => {
+      if (g.parentGoalId) {
+        const existing = childrenByParent.get(g.parentGoalId) || []
+        existing.push(g)
+        childrenByParent.set(g.parentGoalId, existing)
+      }
+    })
+
+    // Create groups for each long-term goal (with its linked children)
+    longTermGoalsList.forEach((lt) => {
+      groups.push({
+        type: 'long-term-group',
+        parent: lt,
+        children: childrenByParent.get(lt.id) || [],
+      })
+    })
+
+    // Create groups for unlinked short-term goals (each is its own group)
+    shortTermGoalsList
+      .filter((g) => !g.parentGoalId)
+      .forEach((g) => {
+        groups.push({
+          type: 'unlinked-short-term',
+          children: [g],
+        })
+      })
+
+    // Note: short-term goals linked to a parent that exists in allGoals are already
+    // included under their parent group. Short-term goals linked to a parent NOT in
+    // allGoals (filtered out) won't appear as orphans -- they're simply not top-level.
+    // However, to avoid hiding them entirely, attach them under their own group.
+    const longTermIds = new Set(longTermGoalsList.map((g) => g.id))
+    shortTermGoalsList
+      .filter((g) => g.parentGoalId && !longTermIds.has(g.parentGoalId))
+      .forEach((g) => {
+        groups.push({
+          type: 'unlinked-short-term',
+          children: [g],
+        })
+      })
+
+    return groups
+  }, [])
+
+  // Compute paginated hierarchy groups
+  const hierarchyGroups = useMemo(() => buildHierarchyGroups(allGoalsForHierarchy), [allGoalsForHierarchy, buildHierarchyGroups])
+  const hierarchyTotalPages = Math.max(1, Math.ceil(hierarchyGroups.length / HIERARCHY_GROUPS_PER_PAGE))
+  const paginatedHierarchyGroups = useMemo(() => {
+    const start = (hierarchyPage - 1) * HIERARCHY_GROUPS_PER_PAGE
+    return hierarchyGroups.slice(start, start + HIERARCHY_GROUPS_PER_PAGE)
+  }, [hierarchyGroups, hierarchyPage])
+
+  const buildFilterParams = useCallback(() => {
+    const params = new URLSearchParams()
+    params.set('sortField', sortField)
+    params.set('sortDir', sortDir)
+    if (search) params.set('search', search)
+    if (typeFilter) params.set('type', typeFilter)
+    if (statusFilter) params.set('status', statusFilter)
+    if (categoryFilter) params.set('category', categoryFilter)
+    if (parentFilter === 'none') {
+      params.set('hasParent', 'false')
+    } else if (parentFilter) {
+      params.set('parentGoalId', parentFilter)
+    }
+    return params
+  }, [sortField, sortDir, search, typeFilter, statusFilter, categoryFilter, parentFilter])
+
+  // Fetch for grid/list views (server-side paginated)
   const fetchGoals = useCallback(async () => {
     setLoading(true)
     setError(null)
 
     try {
-      const params = new URLSearchParams()
+      const params = buildFilterParams()
       params.set('page', String(page))
       params.set('pageSize', '12')
-      params.set('sortField', sortField)
-      params.set('sortDir', sortDir)
-
-      if (search) params.set('search', search)
-      if (typeFilter) params.set('type', typeFilter)
-      if (statusFilter) params.set('status', statusFilter)
-      if (categoryFilter) params.set('category', categoryFilter)
-      if (parentFilter === 'none') {
-        params.set('hasParent', 'false')
-      } else if (parentFilter) {
-        params.set('parentGoalId', parentFilter)
-      }
 
       const response = await fetch(`/api/goals?${params.toString()}`)
       const result: GoalsApiResponse = await response.json()
@@ -93,7 +171,6 @@ export default function GoalsPage() {
         throw new Error(result.error?.message || 'Failed to fetch goals')
       }
 
-      // Map dates from strings to Date objects
       const mappedGoals = result.data.map((goal) => ({
         ...goal,
         targetDate: goal.targetDate ? new Date(goal.targetDate) : null,
@@ -105,7 +182,6 @@ export default function GoalsPage() {
       setTotalPages(result.pagination.totalPages)
       setTotalCount(result.pagination.totalCount)
 
-      // Extract unique categories
       const uniqueCategories = new Set<string>()
       mappedGoals.forEach((g) => {
         if (g.category) uniqueCategories.add(g.category)
@@ -117,7 +193,47 @@ export default function GoalsPage() {
     } finally {
       setLoading(false)
     }
-  }, [page, sortField, sortDir, search, typeFilter, statusFilter, categoryFilter, parentFilter])
+  }, [page, buildFilterParams])
+
+  // Fetch ALL goals for hierarchy view (client-side group pagination)
+  const fetchAllGoalsForHierarchy = useCallback(async () => {
+    setLoading(true)
+    setError(null)
+
+    try {
+      const params = buildFilterParams()
+      params.set('page', '1')
+      params.set('pageSize', '100') // fetch all (max allowed by API)
+
+      const response = await fetch(`/api/goals?${params.toString()}`)
+      const result: GoalsApiResponse = await response.json()
+
+      if (!result.success) {
+        throw new Error(result.error?.message || 'Failed to fetch goals')
+      }
+
+      const mappedGoals = result.data.map((goal) => ({
+        ...goal,
+        targetDate: goal.targetDate ? new Date(goal.targetDate) : null,
+        createdAt: new Date(goal.createdAt),
+        updatedAt: new Date(goal.updatedAt),
+      }))
+
+      setAllGoalsForHierarchy(mappedGoals)
+      setTotalCount(result.pagination.totalCount)
+
+      const uniqueCategories = new Set<string>()
+      mappedGoals.forEach((g) => {
+        if (g.category) uniqueCategories.add(g.category)
+      })
+      setCategories(Array.from(uniqueCategories).sort())
+    } catch (err) {
+      console.error('Fetch goals error:', err)
+      setError(err instanceof Error ? err.message : 'Failed to fetch goals')
+    } finally {
+      setLoading(false)
+    }
+  }, [buildFilterParams])
 
   // Fetch long-term goals for filter dropdown
   useEffect(() => {
@@ -131,13 +247,19 @@ export default function GoalsPage() {
       .catch((err) => console.error('Failed to fetch long-term goals:', err))
   }, [])
 
+  // Fetch data based on current view mode
   useEffect(() => {
-    fetchGoals()
-  }, [fetchGoals])
+    if (viewMode === 'hierarchy') {
+      fetchAllGoalsForHierarchy()
+    } else {
+      fetchGoals()
+    }
+  }, [viewMode, fetchGoals, fetchAllGoalsForHierarchy])
 
   // Reset to page 1 when filters change
   useEffect(() => {
     setPage(1)
+    setHierarchyPage(1)
   }, [search, typeFilter, statusFilter, categoryFilter, parentFilter, sortField, sortDir])
 
   const handleSearch = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -157,21 +279,18 @@ export default function GoalsPage() {
   const hasFilters =
     search || typeFilter || statusFilter || categoryFilter || parentFilter
 
-  const handleCreateSuccess = () => {
-    fetchGoals()
+  const refetch = () => {
+    if (viewMode === 'hierarchy') {
+      fetchAllGoalsForHierarchy()
+    } else {
+      fetchGoals()
+    }
   }
 
-  const handleEditSuccess = () => {
-    fetchGoals()
-  }
-
-  const handleDeleteSuccess = () => {
-    fetchGoals()
-  }
-
-  const handleLinkSuccess = () => {
-    fetchGoals()
-  }
+  const handleCreateSuccess = () => refetch()
+  const handleEditSuccess = () => refetch()
+  const handleDeleteSuccess = () => refetch()
+  const handleLinkSuccess = () => refetch()
 
   return (
     <div className="p-4 sm:p-6 lg:p-8">
@@ -412,106 +531,103 @@ export default function GoalsPage() {
         <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg">
           {error}
         </div>
-      ) : goals.length === 0 ? (
+      ) : (viewMode === 'hierarchy' ? allGoalsForHierarchy.length === 0 : goals.length === 0) ? (
         <EmptyState
           variant={hasFilters ? 'no-filtered-results' : 'no-goals'}
           onCreateGoal={() => setShowCreateModal(true)}
         />
       ) : viewMode === 'hierarchy' ? (
         <>
-          {/* Hierarchy View - respects all applied filters */}
+          {/* Hierarchy View - client-side group pagination */}
           <div className="space-y-6">
-            {/* Long-term goals with their children (only if long-term goals exist in filtered results) */}
-            {goals.filter((g) => g.type === 'long-term').length > 0 && (
-              <>
-                {goals
-                  .filter((g) => g.type === 'long-term')
-                  .map((longTermGoal) => {
-                    // Children are short-term goals linked to this parent that also pass filters
-                    const children = goals.filter(
-                      (g) => g.parentGoalId === longTermGoal.id && g.type === 'short-term'
-                    )
-                    return (
-                      <div key={longTermGoal.id} className="space-y-3">
-                        <GoalCard
-                          goal={longTermGoal}
-                          onEdit={(g) => setEditingGoal(g)}
-                          onDelete={(g) => setDeletingGoal(g)}
-                          onRefresh={fetchGoals}
-                        />
-                        {children.length > 0 && (
-                          <div className="ml-4 sm:ml-8 pl-4 border-l-2 border-indigo-200 space-y-3">
-                            {children.map((child) => (
-                              <GoalCard
-                                key={child.id}
-                                goal={child}
-                                onEdit={(g) => setEditingGoal(g)}
-                                onDelete={(g) => setDeletingGoal(g)}
-                                onLink={(g) => setLinkingGoal(g)}
-                                onRefresh={fetchGoals}
-                              />
-                            ))}
-                          </div>
-                        )}
+            {paginatedHierarchyGroups.map((group) => {
+              if (group.type === 'long-term-group' && group.parent) {
+                return (
+                  <div key={group.parent.id} className="space-y-3">
+                    <GoalCard
+                      goal={group.parent}
+                      onEdit={(g) => setEditingGoal(g)}
+                      onDelete={(g) => setDeletingGoal(g)}
+                      onRefresh={refetch}
+                    />
+                    {group.children.length > 0 && (
+                      <div className="ml-4 sm:ml-8 pl-4 border-l-2 border-indigo-200 space-y-3">
+                        {group.children.map((child) => (
+                          <GoalCard
+                            key={child.id}
+                            goal={child}
+                            onEdit={(g) => setEditingGoal(g)}
+                            onDelete={(g) => setDeletingGoal(g)}
+                            onLink={(g) => setLinkingGoal(g)}
+                            onRefresh={refetch}
+                          />
+                        ))}
                       </div>
-                    )
-                  })}
-              </>
-            )}
-
-            {/* Linked short-term goals whose parent is not in filtered results */}
-            {(() => {
-              const longTermIds = new Set(goals.filter(g => g.type === 'long-term').map(g => g.id))
-              const orphanedLinked = goals.filter(
-                (g) => g.type === 'short-term' && g.parentGoalId && !longTermIds.has(g.parentGoalId)
-              )
-              if (orphanedLinked.length === 0) return null
-              return (
-                <div className="space-y-3">
-                  <h3 className="text-sm font-medium text-gray-500 uppercase tracking-wide px-1">
-                    Linked Short-term Goals (parent filtered out)
-                  </h3>
-                  <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-                    {orphanedLinked.map((goal) => (
-                      <GoalCard
-                        key={goal.id}
-                        goal={goal}
-                        onEdit={(g) => setEditingGoal(g)}
-                        onDelete={(g) => setDeletingGoal(g)}
-                        onLink={(g) => setLinkingGoal(g)}
-                        onRefresh={fetchGoals}
-                      />
-                    ))}
+                    )}
                   </div>
-                </div>
+                )
+              }
+              // Unlinked short-term goal
+              const goal = group.children[0]
+              return (
+                <GoalCard
+                  key={goal.id}
+                  goal={goal}
+                  onEdit={(g) => setEditingGoal(g)}
+                  onDelete={(g) => setDeletingGoal(g)}
+                  onLink={(g) => setLinkingGoal(g)}
+                  onRefresh={refetch}
+                />
               )
-            })()}
-
-            {/* Unlinked short-term goals */}
-            {goals.filter(
-              (g) => g.type === 'short-term' && !g.parentGoalId
-            ).length > 0 && (
-              <div className="space-y-3">
-                <h3 className="text-sm font-medium text-gray-500 uppercase tracking-wide px-1">
-                  Unlinked Short-term Goals
-                </h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-                  {goals
-                    .filter((g) => g.type === 'short-term' && !g.parentGoalId)
-                    .map((goal) => (
-                      <GoalCard
-                        key={goal.id}
-                        goal={goal}
-                        onEdit={(g) => setEditingGoal(g)}
-                        onDelete={(g) => setDeletingGoal(g)}
-                        onLink={(g) => setLinkingGoal(g)}
-                        onRefresh={fetchGoals}
-                      />
-                    ))}
-                </div>
-              </div>
-            )}
+            })}
           </div>
+
+          {/* Hierarchy Pagination */}
+          {hierarchyTotalPages > 1 && (
+            <div className="flex items-center justify-center gap-2 mt-8">
+              <button
+                onClick={() => setHierarchyPage((p) => Math.max(1, p - 1))}
+                disabled={hierarchyPage === 1}
+                className="px-3 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition"
+              >
+                <svg
+                  className="w-5 h-5"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M15 19l-7-7 7-7"
+                  />
+                </svg>
+              </button>
+              <span className="px-4 py-2 text-sm text-gray-600">
+                Page {hierarchyPage} of {hierarchyTotalPages} ({hierarchyGroups.length} {hierarchyGroups.length === 1 ? 'group' : 'groups'})
+              </span>
+              <button
+                onClick={() => setHierarchyPage((p) => Math.min(hierarchyTotalPages, p + 1))}
+                disabled={hierarchyPage === hierarchyTotalPages}
+                className="px-3 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition"
+              >
+                <svg
+                  className="w-5 h-5"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M9 5l7 7-7 7"
+                  />
+                </svg>
+              </button>
+            </div>
+          )}
         </>
       ) : (
         <>
@@ -530,7 +646,7 @@ export default function GoalsPage() {
                 onEdit={(g) => setEditingGoal(g)}
                 onDelete={(g) => setDeletingGoal(g)}
                 onLink={goal.type === 'short-term' ? (g) => setLinkingGoal(g) : undefined}
-                onRefresh={fetchGoals}
+                onRefresh={refetch}
               />
             ))}
           </div>

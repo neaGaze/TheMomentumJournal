@@ -32,7 +32,7 @@ export async function GET(request: NextRequest) {
       if (authHeader?.startsWith('Bearer ')) {
         const token = authHeader.substring(7);
         supabase = createSupabaseClient(
-          process.env.NEXT_PUBLIC_SUPABASE_URL!,
+          process.env.SUPABASE_INTERNAL_URL || process.env.NEXT_PUBLIC_SUPABASE_URL!,
           process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
           {
             global: {

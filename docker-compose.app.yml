@@ -1,0 +1,28 @@
+# Run AFTER `supabase start`. The Supabase CLI creates its own Docker network
+# (network_supabase_TheMomentumJournal). We join it so the Next.js server can
+# reach Kong directly, while the browser still uses the host-published port.
+#
+# Usage:
+#   supabase start                                     # boots Postgres + GoTrue + Kong on host ports
+#   docker compose -f docker-compose.app.yml up -d     # boots the Next.js app on :3000
+#   docker compose -f docker-compose.app.yml down
+services:
+  web:
+    build: .
+    container_name: momentum-web
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    env_file:
+      - .env.local
+    environment:
+      # Server-side calls go through the Supabase network (Kong on internal port 8000).
+      # Browser-side calls keep using http://localhost:54321 via NEXT_PUBLIC_SUPABASE_URL in .env.local.
+      SUPABASE_INTERNAL_URL: http://supabase_kong_TheMomentumJournal:8000
+    networks:
+      - supabase_network
+
+networks:
+  supabase_network:
+    name: supabase_network_TheMomentumJournal
+    external: true

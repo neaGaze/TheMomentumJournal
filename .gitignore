@@ -3,6 +3,11 @@
 /.pnp
 .pnp.js
 
+# db dumps / backups (contain real data + password hashes)
+*.dump
+*.sql.bak
+backup*.sql
+
 # testing
 /coverage
 

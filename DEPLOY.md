@@ -56,6 +56,15 @@ docker logs -f momentum-postgres # watch DB startup
 
 Compose boots `postgres:16` (volume `pgdata`, healthcheck via `pg_isready`), waits until it's healthy, then starts the app. The DB lives in the named volume and survives `docker compose down`; use `docker compose down -v` to wipe it.
 
+> **⚠ The schema is NOT created automatically.** A fresh `pgdata` volume is empty, and the runtime image doesn't ship `src/` or drizzle-kit, so migrations can't run inside the `web` container. Before the app works you must load the schema (and your data) **first** — via §4 (cloud import) or §4b (transfer an existing DB). Recommended order on a fresh server: bring up Postgres only, load data, *then* the app:
+> ```sh
+> docker compose up -d postgres
+> until [ "$(docker inspect -f '{{.State.Health.Status}}' momentum-postgres)" = healthy ]; do sleep 2; done
+> # ...run §4 or §4b here...
+> docker compose up -d --build        # now start the app
+> ```
+> (If you ever bring up a fresh DB *without* a dump, apply the schema by piping the generated migrations: `cat src/db/migrations/0000_*.sql src/db/migrations/0001_triggers.sql | docker exec -i momentum-postgres psql -U momentum -d momentum`.)
+
 Test from another LAN device: `http://<ubuntu-lan-ip>:3000`.
 
 ## 4. Migrate existing cloud data
@@ -134,18 +143,71 @@ docker exec momentum-postgres env PGPASSWORD=momentum psql -h localhost -U momen
 >
 > **Rotate the cloud DB password** after the import — it ends up in shell history / connection strings.
 
-## 5. Reverse proxy / Cloudflare (your part)
+## 4b. Alternative: transfer an existing local DB
 
-Only the app is exposed now — the browser no longer talks to the DB directly.
+If you've already populated one machine (e.g. a dev Mac) and just want that data on the server, skip the cloud entirely: dump the whole DB and restore it. This also carries the schema + triggers + drizzle migration tracking, so no separate schema step is needed.
 
-| External hostname    | → backend          |
-|----------------------|--------------------|
-| `app.yourdomain.com` | `127.0.0.1:3000`   |
+**On the source machine** (where `momentum-postgres` already has the data):
+```sh
+docker exec momentum-postgres pg_dump -U momentum -d momentum \
+  --no-owner --no-privileges > momentum.dump
+scp momentum.dump you@server:~/momentum.dump
+```
 
-After DNS/TLS is up, set in `.env.local`:
-- `NEXT_PUBLIC_APP_URL=https://app.yourdomain.com`
+**On the server** (Postgres up + healthy per §3, app NOT started yet):
+```sh
+cat ~/momentum.dump | docker exec -i momentum-postgres psql -U momentum -d momentum
+```
+Then start the app: `docker compose up -d --build`.
 
-Then rebuild: `docker compose up -d --build`.
+> `momentum.dump` contains real user data + bcrypt password hashes. **Never commit it** (it's gitignored); delete both copies after the restore. Works even after the cloud password is rotated or the cloud project is deleted.
+
+## 5. Public access (reverse proxy + TLS)
+
+The compose file binds both services to `127.0.0.1` (`127.0.0.1:3000` / `127.0.0.1:5432`) — nothing is reachable from the internet directly. A reverse proxy / tunnel terminates TLS and forwards to `127.0.0.1:3000`. Postgres stays local-only.
+
+Two required env settings for a proxied deploy (already wired):
+- `AUTH_TRUST_HOST=true` — compose sets this on the `web` service; without it Auth.js v5 rejects the forwarded host with `UntrustedHost` and login breaks.
+- `NEXT_PUBLIC_APP_URL=https://app.yourdomain.com` in `.env.local`, then `docker compose up -d --build`.
+
+### Option A — Cloudflare Tunnel (recommended for a home server)
+
+No port-forwarding, hides your home IP, free TLS. On the server:
+```sh
+curl -L https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64 \
+  -o /usr/local/bin/cloudflared && chmod +x /usr/local/bin/cloudflared
+cloudflared tunnel login
+cloudflared tunnel create momentum
+cloudflared tunnel route dns momentum app.yourdomain.com
+```
+`~/.cloudflared/config.yml`:
+```yaml
+tunnel: momentum
+credentials-file: /home/you/.cloudflared/<tunnel-id>.json
+ingress:
+  - hostname: app.yourdomain.com
+    service: http://127.0.0.1:3000
+  - service: http_status:404
+```
+Install as a service so it survives reboots: `sudo cloudflared service install`.
+
+### Option B — Caddy (auto Let's Encrypt, requires ports 80/443 forwarded)
+
+`/etc/caddy/Caddyfile`:
+```
+app.yourdomain.com {
+    reverse_proxy 127.0.0.1:3000
+}
+```
+Forward router ports 80/443 → server, then `sudo systemctl reload caddy`.
+
+### Firewall
+
+With Cloudflare Tunnel, no inbound app ports are needed:
+```sh
+sudo ufw allow OpenSSH && sudo ufw enable
+```
+(For the Caddy route, also `sudo ufw allow 80,443/tcp`.)
 
 ## Daily ops
 

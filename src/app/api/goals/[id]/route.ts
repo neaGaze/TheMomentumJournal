@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
-import { createClient } from '@/lib/supabase/server';
+import { auth } from '@/auth';
 import { getGoalById, updateGoal, deleteGoal } from '@/lib/db/goals';
 import { GOAL_LINK_ERROR_CODES } from '@/types';
 
@@ -54,19 +54,16 @@ export async function GET(request: NextRequest, context: RouteContext) {
       );
     }
 
-    const supabase = await createClient();
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
-
-    if (!user) {
+    const session = await auth();
+    if (!session?.user?.id) {
       return NextResponse.json(
         { success: false, data: null, error: { message: 'Unauthorized', status: 401 } },
         { status: 401 }
       );
     }
+    const userId = session.user.id;
 
-    const goal = await getGoalById(supabase, id, user.id);
+    const goal = await getGoalById(id, userId);
 
     if (!goal) {
       return NextResponse.json(
@@ -106,17 +103,14 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
       );
     }
 
-    const supabase = await createClient();
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
-
-    if (!user) {
+    const session = await auth();
+    if (!session?.user?.id) {
       return NextResponse.json(
         { success: false, data: null, error: { message: 'Unauthorized', status: 401 } },
         { status: 401 }
       );
     }
+    const userId = session.user.id;
 
     const body = await request.json();
     const parsed = updateGoalSchema.safeParse(body);
@@ -138,7 +132,7 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
 
     // Prevent type change from short-term to long-term if goal has parent
     if (parsed.data.type === 'long-term') {
-      const existingGoal = await getGoalById(supabase, id, user.id);
+      const existingGoal = await getGoalById(id, userId);
       if (existingGoal?.parentGoalId) {
         return NextResponse.json(
           {
@@ -155,7 +149,7 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
       }
     }
 
-    const goal = await updateGoal(supabase, id, user.id, parsed.data);
+    const goal = await updateGoal(id, userId, parsed.data);
 
     if (!goal) {
       return NextResponse.json(
@@ -195,19 +189,16 @@ export async function DELETE(request: NextRequest, context: RouteContext) {
       );
     }
 
-    const supabase = await createClient();
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
-
-    if (!user) {
+    const session = await auth();
+    if (!session?.user?.id) {
       return NextResponse.json(
         { success: false, data: null, error: { message: 'Unauthorized', status: 401 } },
         { status: 401 }
       );
     }
+    const userId = session.user.id;
 
-    const deleted = await deleteGoal(supabase, id, user.id);
+    const deleted = await deleteGoal(id, userId);
 
     if (!deleted) {
       return NextResponse.json(

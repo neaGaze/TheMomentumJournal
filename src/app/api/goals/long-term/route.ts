@@ -1,23 +1,22 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@/lib/supabase/server';
+import { NextResponse } from 'next/server';
+import { auth } from '@/auth';
 import { getLongTermGoals } from '@/lib/db/goals';
 
 /**
  * GET /api/goals/long-term - Get all active long-term goals for linking
  */
-export async function GET(request: NextRequest) {
+export async function GET() {
   try {
-    const supabase = await createClient();
-    const { data: { user } } = await supabase.auth.getUser();
-
-    if (!user) {
+    const session = await auth();
+    if (!session?.user?.id) {
       return NextResponse.json(
         { success: false, data: null, error: { message: 'Unauthorized', status: 401 } },
         { status: 401 }
       );
     }
+    const userId = session.user.id;
 
-    const goals = await getLongTermGoals(supabase, user.id);
+    const goals = await getLongTermGoals(userId);
 
     return NextResponse.json({
       success: true,

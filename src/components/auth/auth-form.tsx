@@ -1,9 +1,8 @@
 'use client'
 
 import { useState } from 'react'
-import { createClient } from '@/lib/supabase/client'
+import { signIn } from 'next-auth/react'
 import { useRouter, useSearchParams } from 'next/navigation'
-import { ForgotPasswordForm } from './forgot-password-form'
 
 interface AuthFormProps {
   mode: 'login' | 'signup'
@@ -15,12 +14,10 @@ export function AuthForm({ mode }: AuthFormProps) {
   const [fullName, setFullName] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [showForgotPassword, setShowForgotPassword] = useState(false)
   const router = useRouter()
   const searchParams = useSearchParams()
-  const supabase = createClient()
 
-  // Get redirect path from URL params (set by middleware when accessing protected routes)
+  // Redirect path set by middleware when accessing protected routes
   const redirectPath = searchParams.get('redirect') || '/dashboard'
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -30,38 +27,42 @@ export function AuthForm({ mode }: AuthFormProps) {
 
     try {
       if (mode === 'signup') {
-        const { error } = await supabase.auth.signUp({
+        const res = await fetch('/api/auth/register', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email, password, fullName }),
+        })
+        if (!res.ok) {
+          const data = await res.json().catch(() => ({}))
+          throw new Error(data.error || 'Registration failed')
+        }
+        // No email confirmation — sign in immediately
+        const result = await signIn('credentials', {
           email,
           password,
-          options: {
-            data: {
-              full_name: fullName,
-            },
-            emailRedirectTo: `${window.location.origin}/api/auth/callback`,
-          },
+          redirect: false,
         })
-        if (error) throw error
-        alert('Check your email to confirm signup!')
-        router.push('/login')
-      } else {
-        const { error } = await supabase.auth.signInWithPassword({
-          email,
-          password,
-        })
-        if (error) throw error
+        if (result?.error) throw new Error('Sign in failed')
+        router.push('/dashboard')
         router.refresh()
-        // Redirect to original destination or dashboard
+      } else {
+        const result = await signIn('credentials', {
+          email,
+          password,
+          redirect: false,
+        })
+        if (result?.error) {
+          setError('Invalid email or password')
+          return
+        }
         router.push(redirectPath)
+        router.refresh()
       }
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'An error occurred')
     } finally {
       setLoading(false)
     }
-  }
-
-  if (showForgotPassword && mode === 'login') {
-    return <ForgotPasswordForm onBack={() => setShowForgotPassword(false)} />
   }
 
   return (
@@ -115,15 +116,6 @@ export function AuthForm({ mode }: AuthFormProps) {
           minLength={6}
           className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white text-gray-900 placeholder:text-gray-500"
         />
-        {mode === 'login' && (
-          <button
-            type="button"
-            onClick={() => setShowForgotPassword(true)}
-            className="text-sm text-blue-600 hover:underline mt-2"
-          >
-            Forgot password?
-          </button>
-        )}
       </div>
 
       <button

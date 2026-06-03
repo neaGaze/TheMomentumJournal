@@ -3,8 +3,10 @@
  * Context fetching and analysis storage
  */
 
-import type { SupabaseClient } from '@supabase/supabase-js';
-import type { AIAnalysisRow } from '@/types/database.types';
+import { and, eq, gte, lte, asc, desc, inArray, count } from 'drizzle-orm';
+import { db } from '@/db';
+import { goals, journalEntries, journalGoalMentions, aiAnalyses } from '@/db/schema';
+import { mapGoal, mapJournalEntry as mapJournal, mapAIAnalysis as mapAnalysis } from '@/db/mappers';
 import type {
   Goal,
   JournalEntry,
@@ -15,14 +17,6 @@ import type {
   AnalysisType,
   PaginationParams,
 } from '@/types';
-import {
-  mapGoalFromRow as mapGoal,
-  mapJournalEntryFromRow as mapJournal,
-  mapAIAnalysisFromRow as mapAnalysis,
-} from '@/types';
-
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-type SupabaseClientAny = SupabaseClient<any, any, any>;
 
 // Context types for AI analysis
 export interface GoalAnalysisContext {
@@ -63,45 +57,40 @@ export interface AnalysisQueryResult {
  * Get context for goal analysis - fetches goal + related journals
  */
 export async function getContextForGoalAnalysis(
-  supabase: SupabaseClientAny,
   goalId: string,
   userId: string
 ): Promise<GoalAnalysisContext | null> {
   // Fetch goal
-  const { data: goalData, error: goalError } = await supabase
-    .from('goals')
-    .select('*')
-    .eq('id', goalId)
-    .eq('user_id', userId)
-    .single();
+  const goalRows = await db
+    .select()
+    .from(goals)
+    .where(and(eq(goals.id, goalId), eq(goals.userId, userId)))
+    .limit(1);
 
-  if (goalError || !goalData) {
+  if (!goalRows[0]) {
     return null;
   }
 
-  const goal = mapGoal(goalData);
+  const goal = mapGoal(goalRows[0]);
 
   // Fetch related journals via journal_goal_mentions
-  const { data: mentions } = await supabase
-    .from('journal_goal_mentions')
-    .select('journal_entry_id')
-    .eq('goal_id', goalId);
+  const mentions = await db
+    .select({ journalEntryId: journalGoalMentions.journalEntryId })
+    .from(journalGoalMentions)
+    .where(eq(journalGoalMentions.goalId, goalId));
 
   let relatedJournals: JournalEntry[] = [];
-  if (mentions && mentions.length > 0) {
-    const journalIds = mentions.map((m: { journal_entry_id: string }) => m.journal_entry_id);
+  if (mentions.length > 0) {
+    const journalIds = mentions.map((m) => m.journalEntryId);
 
-    const { data: journals } = await supabase
-      .from('journal_entries')
-      .select('*')
-      .in('id', journalIds)
-      .eq('user_id', userId)
-      .order('entry_date', { ascending: false })
+    const journals = await db
+      .select()
+      .from(journalEntries)
+      .where(and(inArray(journalEntries.id, journalIds), eq(journalEntries.userId, userId)))
+      .orderBy(desc(journalEntries.entryDate))
       .limit(20); // Limit to most recent 20 for context
 
-    if (journals) {
-      relatedJournals = journals.map(mapJournal);
-    }
+    relatedJournals = journals.map(mapJournal);
   }
 
   return { goal, relatedJournals };
@@ -111,43 +100,38 @@ export async function getContextForGoalAnalysis(
  * Get context for journal analysis - fetches journal + linked goals
  */
 export async function getContextForJournalAnalysis(
-  supabase: SupabaseClientAny,
   journalId: string,
   userId: string
 ): Promise<JournalAnalysisContext | null> {
   // Fetch journal
-  const { data: journalData, error: journalError } = await supabase
-    .from('journal_entries')
-    .select('*')
-    .eq('id', journalId)
-    .eq('user_id', userId)
-    .single();
+  const journalRows = await db
+    .select()
+    .from(journalEntries)
+    .where(and(eq(journalEntries.id, journalId), eq(journalEntries.userId, userId)))
+    .limit(1);
 
-  if (journalError || !journalData) {
+  if (!journalRows[0]) {
     return null;
   }
 
-  const journal = mapJournal(journalData);
+  const journal = mapJournal(journalRows[0]);
 
   // Fetch linked goals via journal_goal_mentions
-  const { data: mentions } = await supabase
-    .from('journal_goal_mentions')
-    .select('goal_id')
-    .eq('journal_entry_id', journalId);
+  const mentions = await db
+    .select({ goalId: journalGoalMentions.goalId })
+    .from(journalGoalMentions)
+    .where(eq(journalGoalMentions.journalEntryId, journalId));
 
   let linkedGoals: Goal[] = [];
-  if (mentions && mentions.length > 0) {
-    const goalIds = mentions.map((m: { goal_id: string }) => m.goal_id);
+  if (mentions.length > 0) {
+    const goalIds = mentions.map((m) => m.goalId);
 
-    const { data: goals } = await supabase
-      .from('goals')
-      .select('*')
-      .in('id', goalIds)
-      .eq('user_id', userId);
+    const goalRows = await db
+      .select()
+      .from(goals)
+      .where(and(inArray(goals.id, goalIds), eq(goals.userId, userId)));
 
-    if (goals) {
-      linkedGoals = goals.map(mapGoal);
-    }
+    linkedGoals = goalRows.map(mapGoal);
   }
 
   return { journal, linkedGoals };
@@ -157,7 +141,6 @@ export async function getContextForJournalAnalysis(
  * Get context for weekly/monthly insights
  */
 export async function getContextForWeeklyInsights(
-  supabase: SupabaseClientAny,
   userId: string,
   timeline: 'week' | 'month' = 'week'
 ): Promise<WeeklyInsightsContext> {
@@ -173,26 +156,25 @@ export async function getContextForWeeklyInsights(
   const startDateStr = startDate.toLocaleDateString('en-CA');
 
   // Fetch journals in range
-  const { data: journalsData } = await supabase
-    .from('journal_entries')
-    .select('*')
-    .eq('user_id', userId)
-    .gte('entry_date', startDateStr)
-    .order('entry_date', { ascending: false });
+  const journalsData = await db
+    .select()
+    .from(journalEntries)
+    .where(and(eq(journalEntries.userId, userId), gte(journalEntries.entryDate, startDateStr)))
+    .orderBy(desc(journalEntries.entryDate));
 
-  const journals = (journalsData ?? []).map(mapJournal);
+  const journals = journalsData.map(mapJournal);
 
   // Fetch all goals
-  const { data: goalsData } = await supabase
-    .from('goals')
-    .select('*')
-    .eq('user_id', userId);
+  const goalsData = await db
+    .select()
+    .from(goals)
+    .where(eq(goals.userId, userId));
 
-  const goals = (goalsData ?? []).map(mapGoal);
+  const goalsList = goalsData.map(mapGoal);
 
   // Calculate stats
-  const activeGoals = goals.filter(g => g.status === 'active').length;
-  const completedGoals = goals.filter(g => g.status === 'completed').length;
+  const activeGoals = goalsList.filter((g) => g.status === 'active').length;
+  const completedGoals = goalsList.filter((g) => g.status === 'completed').length;
   const journalCount = journals.length;
 
   // Calculate streak (simplified - consecutive days with entries)
@@ -208,8 +190,8 @@ export async function getContextForWeeklyInsights(
   };
 
   const moodsWithScores = journals
-    .filter(j => j.mood && moodScores[j.mood])
-    .map(j => moodScores[j.mood!]);
+    .filter((j) => j.mood && moodScores[j.mood])
+    .map((j) => moodScores[j.mood!]);
 
   let avgMood: string | undefined;
   if (moodsWithScores.length > 0) {
@@ -223,7 +205,7 @@ export async function getContextForWeeklyInsights(
 
   return {
     journals,
-    goals,
+    goals: goalsList,
     stats: {
       activeGoals,
       completedGoals,
@@ -241,9 +223,7 @@ function calculateStreak(journals: JournalEntry[]): number {
   if (journals.length === 0) return 0;
 
   // Sort by date descending
-  const sorted = [...journals].sort(
-    (a, b) => b.entryDate.localeCompare(a.entryDate)
-  );
+  const sorted = [...journals].sort((a, b) => b.entryDate.localeCompare(a.entryDate));
 
   // Get unique dates
   const uniqueDates = new Set<string>();
@@ -283,7 +263,6 @@ function calculateStreak(journals: JournalEntry[]): number {
  * Save AI analysis result
  */
 export async function saveAnalysis(
-  supabase: SupabaseClientAny,
   userId: string,
   type: AnalysisType,
   data: {
@@ -295,35 +274,27 @@ export async function saveAnalysis(
     tokensUsed?: number | null;
   }
 ): Promise<AIAnalysis> {
-  const insertData = {
-    user_id: userId,
-    analysis_type: type,
-    journal_entries_analyzed: data.journalEntriesAnalyzed,
-    goals_analyzed: data.goalsAnalyzed,
-    insights: data.insights,
-    recommendations: data.recommendations ?? null,
-    progress_summary: data.progressSummary ?? null,
-    tokens_used: data.tokensUsed ?? null,
-  };
+  const rows = await db
+    .insert(aiAnalyses)
+    .values({
+      userId,
+      analysisType: type,
+      journalEntriesAnalyzed: data.journalEntriesAnalyzed,
+      goalsAnalyzed: data.goalsAnalyzed,
+      insights: data.insights,
+      recommendations: data.recommendations ?? null,
+      progressSummary: data.progressSummary ?? null,
+      tokensUsed: data.tokensUsed ?? null,
+    })
+    .returning();
 
-  const { data: result, error } = await supabase
-    .from('ai_analyses')
-    .insert(insertData)
-    .select()
-    .single();
-
-  if (error) {
-    throw new Error(`Failed to save analysis: ${error.message}`);
-  }
-
-  return mapAnalysis(result);
+  return mapAnalysis(rows[0]);
 }
 
 /**
  * Get stored analyses with pagination and filters
  */
 export async function getAnalyses(
-  supabase: SupabaseClientAny,
   userId: string,
   filters?: AnalysisFilters,
   pagination?: PaginationParams
@@ -332,103 +303,92 @@ export async function getAnalyses(
   const pageSize = pagination?.pageSize ?? 10;
   const offset = (page - 1) * pageSize;
 
-  let query = supabase
-    .from('ai_analyses')
-    .select('*', { count: 'exact' })
-    .eq('user_id', userId);
+  const conditions = [eq(aiAnalyses.userId, userId)];
 
-  // Apply filters
   if (filters?.type) {
-    query = query.eq('analysis_type', filters.type);
+    conditions.push(eq(aiAnalyses.analysisType, filters.type));
   }
   if (filters?.dateFrom) {
-    query = query.gte('created_at', filters.dateFrom);
+    conditions.push(gte(aiAnalyses.createdAt, new Date(filters.dateFrom)));
   }
   if (filters?.dateTo) {
-    query = query.lte('created_at', filters.dateTo);
+    conditions.push(lte(aiAnalyses.createdAt, new Date(filters.dateTo)));
   }
 
-  // Sort by newest first
-  query = query.order('created_at', { ascending: false });
+  const where = and(...conditions);
 
-  // Apply pagination
-  query = query.range(offset, offset + pageSize - 1);
-
-  const { data, error, count } = await query;
-
-  if (error) {
-    throw new Error(`Failed to fetch analyses: ${error.message}`);
-  }
+  const [rows, countRows] = await Promise.all([
+    db
+      .select()
+      .from(aiAnalyses)
+      .where(where)
+      .orderBy(desc(aiAnalyses.createdAt))
+      .limit(pageSize)
+      .offset(offset),
+    db.select({ c: count() }).from(aiAnalyses).where(where),
+  ]);
 
   return {
-    analyses: (data ?? []).map(mapAnalysis),
-    totalCount: count ?? 0,
+    analyses: rows.map(mapAnalysis),
+    totalCount: countRows[0]?.c ?? 0,
   };
 }
 
 /**
  * Get single analysis by ID (validates user ownership)
  */
-export async function getAnalysisById(
-  supabase: SupabaseClientAny,
-  id: string,
-  userId: string
-): Promise<AIAnalysis | null> {
-  const { data, error } = await supabase
-    .from('ai_analyses')
-    .select('*')
-    .eq('id', id)
-    .eq('user_id', userId)
-    .single();
+export async function getAnalysisById(id: string, userId: string): Promise<AIAnalysis | null> {
+  const rows = await db
+    .select()
+    .from(aiAnalyses)
+    .where(and(eq(aiAnalyses.id, id), eq(aiAnalyses.userId, userId)))
+    .limit(1);
 
-  if (error) {
-    if (error.code === 'PGRST116') {
-      return null; // Not found
-    }
-    throw new Error(`Failed to fetch analysis: ${error.message}`);
-  }
-
-  return data ? mapAnalysis(data) : null;
+  return rows[0] ? mapAnalysis(rows[0]) : null;
 }
 
 /**
  * Get cached weekly insight (to avoid regenerating)
  */
 export async function getCachedWeeklyInsight(
-  supabase: SupabaseClientAny,
   userId: string,
   weekStartDate: string
 ): Promise<AIAnalysis | null> {
-  const { data } = await supabase
-    .from('ai_analyses')
-    .select('*')
-    .eq('user_id', userId)
-    .eq('analysis_type', 'weekly')
-    .gte('created_at', weekStartDate)
-    .order('created_at', { ascending: false })
-    .limit(1)
-    .single();
+  const rows = await db
+    .select()
+    .from(aiAnalyses)
+    .where(
+      and(
+        eq(aiAnalyses.userId, userId),
+        eq(aiAnalyses.analysisType, 'weekly'),
+        gte(aiAnalyses.createdAt, new Date(weekStartDate))
+      )
+    )
+    .orderBy(desc(aiAnalyses.createdAt))
+    .limit(1);
 
-  return data ? mapAnalysis(data) : null;
+  return rows[0] ? mapAnalysis(rows[0]) : null;
 }
 
 /**
  * Get cached monthly insight
  */
 export async function getCachedMonthlyInsight(
-  supabase: SupabaseClientAny,
   userId: string,
   monthStartDate: string
 ): Promise<AIAnalysis | null> {
-  const { data } = await supabase
-    .from('ai_analyses')
-    .select('*')
-    .eq('user_id', userId)
-    .eq('analysis_type', 'monthly')
-    .gte('created_at', monthStartDate)
-    .order('created_at', { ascending: false })
-    .limit(1)
-    .single();
+  const rows = await db
+    .select()
+    .from(aiAnalyses)
+    .where(
+      and(
+        eq(aiAnalyses.userId, userId),
+        eq(aiAnalyses.analysisType, 'monthly'),
+        gte(aiAnalyses.createdAt, new Date(monthStartDate))
+      )
+    )
+    .orderBy(desc(aiAnalyses.createdAt))
+    .limit(1);
 
-  return data ? mapAnalysis(data) : null;
+  return rows[0] ? mapAnalysis(rows[0]) : null;
 }

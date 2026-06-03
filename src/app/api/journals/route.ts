@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
-import { createClient } from '@/lib/supabase/server';
+import { auth } from '@/auth';
 import { getJournalEntriesWithGoals, createJournalEntryWithGoals } from '@/lib/db/journals';
 import type { JournalFilters, JournalSortOptions, PaginationParams } from '@/types';
 
@@ -26,17 +26,14 @@ const createJournalSchema = z.object({
  */
 export async function GET(request: NextRequest) {
   try {
-    const supabase = await createClient();
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
-
-    if (!user) {
+    const session = await auth();
+    if (!session?.user?.id) {
       return NextResponse.json(
         { success: false, error: { message: 'Unauthorized', status: 401 } },
         { status: 401 }
       );
     }
+    const userId = session.user.id;
 
     const searchParams = request.nextUrl.searchParams;
 
@@ -89,7 +86,7 @@ export async function GET(request: NextRequest) {
       ),
     };
 
-    const result = await getJournalEntriesWithGoals(supabase, user.id, { filters, sort, pagination });
+    const result = await getJournalEntriesWithGoals(userId, { filters, sort, pagination });
 
     const totalPages = Math.ceil(result.totalCount / (pagination.pageSize ?? 10));
 
@@ -127,17 +124,14 @@ export async function GET(request: NextRequest) {
  */
 export async function POST(request: NextRequest) {
   try {
-    const supabase = await createClient();
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
-
-    if (!user) {
+    const session = await auth();
+    if (!session?.user?.id) {
       return NextResponse.json(
         { success: false, data: null, error: { message: 'Unauthorized', status: 401 } },
         { status: 401 }
       );
     }
+    const userId = session.user.id;
 
     const body = await request.json();
     const parsed = createJournalSchema.safeParse(body);
@@ -157,7 +151,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const journal = await createJournalEntryWithGoals(supabase, user.id, parsed.data);
+    const journal = await createJournalEntryWithGoals(userId, parsed.data);
 
     return NextResponse.json(
       { success: true, data: journal, error: null },

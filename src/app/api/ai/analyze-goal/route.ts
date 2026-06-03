@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
-import { createClient } from '@/lib/supabase/server';
+import { auth } from '@/auth';
 import { getContextForGoalAnalysis, saveAnalysis } from '@/lib/db/ai';
 import { analyzeGoalProgress, ClaudeAPIError } from '@/lib/claude/client';
 
@@ -14,17 +14,14 @@ const requestSchema = z.object({
  */
 export async function POST(request: NextRequest) {
   try {
-    const supabase = await createClient();
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
-
-    if (!user) {
+    const session = await auth();
+    if (!session?.user?.id) {
       return NextResponse.json(
         { success: false, data: null, error: { message: 'Unauthorized', status: 401 } },
         { status: 401 }
       );
     }
+    const userId = session.user.id;
 
     const body = await request.json();
     const parsed = requestSchema.safeParse(body);
@@ -47,7 +44,7 @@ export async function POST(request: NextRequest) {
     const { goalId } = parsed.data;
 
     // Fetch context for analysis
-    const context = await getContextForGoalAnalysis(supabase, goalId, user.id);
+    const context = await getContextForGoalAnalysis(goalId, userId);
 
     if (!context) {
       return NextResponse.json(
@@ -64,7 +61,7 @@ export async function POST(request: NextRequest) {
     const result = await analyzeGoalProgress(context.goal, context.relatedJournals);
 
     // Save analysis to database
-    const savedAnalysis = await saveAnalysis(supabase, user.id, 'on-demand', {
+    const savedAnalysis = await saveAnalysis(userId, 'on-demand', {
       journalEntriesAnalyzed: context.relatedJournals.map(j => j.id),
       goalsAnalyzed: [goalId],
       insights: result.insights,

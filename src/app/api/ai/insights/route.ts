@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
-import { createClient } from '@/lib/supabase/server';
+import { auth } from '@/auth';
 import {
   getContextForWeeklyInsights,
   saveAnalysis,
@@ -25,17 +25,14 @@ const postBodySchema = z.object({
  */
 export async function GET(request: NextRequest) {
   try {
-    const supabase = await createClient();
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
-
-    if (!user) {
+    const session = await auth();
+    if (!session?.user?.id) {
       return NextResponse.json(
         { success: false, data: null, error: { message: 'Unauthorized', status: 401 } },
         { status: 401 }
       );
     }
+    const userId = session.user.id;
 
     const searchParams = request.nextUrl.searchParams;
     const timelineParam = searchParams.get('timeline') ?? 'week';
@@ -73,8 +70,8 @@ export async function GET(request: NextRequest) {
     // Check for cached insight (unless refresh requested)
     if (!forceRefresh) {
       const cachedInsight = timeline === 'week'
-        ? await getCachedWeeklyInsight(supabase, user.id, periodStartStr)
-        : await getCachedMonthlyInsight(supabase, user.id, periodStartStr);
+        ? await getCachedWeeklyInsight(userId, periodStartStr)
+        : await getCachedMonthlyInsight(userId, periodStartStr);
 
       if (cachedInsight) {
         return NextResponse.json({
@@ -91,7 +88,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Fetch context for insights generation
-    const context = await getContextForWeeklyInsights(supabase, user.id, timeline);
+    const context = await getContextForWeeklyInsights(userId, timeline);
 
     // Generate insights using Claude
     const result = await generateWeeklyInsights(
@@ -101,7 +98,7 @@ export async function GET(request: NextRequest) {
     );
 
     // Save analysis to database
-    const savedAnalysis = await saveAnalysis(supabase, user.id, analysisType, {
+    const savedAnalysis = await saveAnalysis(userId, analysisType, {
       journalEntriesAnalyzed: context.journals.map(j => j.id),
       goalsAnalyzed: context.goals.map(g => g.id),
       insights: {
@@ -198,17 +195,14 @@ export async function GET(request: NextRequest) {
  */
 export async function POST(request: NextRequest) {
   try {
-    const supabase = await createClient();
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
-
-    if (!user) {
+    const session = await auth();
+    if (!session?.user?.id) {
       return NextResponse.json(
         { success: false, data: null, error: { message: 'Unauthorized', status: 401 } },
         { status: 401 }
       );
     }
+    const userId = session.user.id;
 
     const body = await request.json();
     const parsed = postBodySchema.safeParse(body);
@@ -251,8 +245,8 @@ export async function POST(request: NextRequest) {
     // Check cache unless refresh requested (POST always generates, but we can still skip if recent)
     if (!refresh) {
       const cachedInsight = timeline === 'week'
-        ? await getCachedWeeklyInsight(supabase, user.id, periodStartStr)
-        : await getCachedMonthlyInsight(supabase, user.id, periodStartStr);
+        ? await getCachedWeeklyInsight(userId, periodStartStr)
+        : await getCachedMonthlyInsight(userId, periodStartStr);
 
       if (cachedInsight) {
         return NextResponse.json({
@@ -269,7 +263,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Fetch context for insights generation
-    const context = await getContextForWeeklyInsights(supabase, user.id, timeline);
+    const context = await getContextForWeeklyInsights(userId, timeline);
 
     // Generate insights using Claude
     const result = await generateWeeklyInsights(
@@ -279,7 +273,7 @@ export async function POST(request: NextRequest) {
     );
 
     // Save analysis to database
-    const savedAnalysis = await saveAnalysis(supabase, user.id, analysisType, {
+    const savedAnalysis = await saveAnalysis(userId, analysisType, {
       journalEntriesAnalyzed: context.journals.map(j => j.id),
       goalsAnalyzed: context.goals.map(g => g.id),
       insights: {

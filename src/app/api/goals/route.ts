@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
-import { createClient } from '@/lib/supabase/server';
-import { getGoals, createGoal, getGoalCategories } from '@/lib/db/goals';
+import { auth } from '@/auth';
+import { getGoals, createGoal } from '@/lib/db/goals';
 import type { GoalFilters, GoalSortOptions, PaginationParams } from '@/types';
 
 // Validation schemas
@@ -44,17 +44,14 @@ const createGoalSchema = z.object({
  */
 export async function GET(request: NextRequest) {
   try {
-    const supabase = await createClient();
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
-
-    if (!user) {
+    const session = await auth();
+    if (!session?.user?.id) {
       return NextResponse.json(
         { success: false, error: { message: 'Unauthorized', status: 401 } },
         { status: 401 }
       );
     }
+    const userId = session.user.id;
 
     const searchParams = request.nextUrl.searchParams;
 
@@ -108,7 +105,7 @@ export async function GET(request: NextRequest) {
       ),
     };
 
-    const result = await getGoals(supabase, user.id, { filters, sort, pagination });
+    const result = await getGoals(userId, { filters, sort, pagination });
 
     const totalPages = Math.ceil(result.totalCount / (pagination.pageSize ?? 10));
 
@@ -146,17 +143,14 @@ export async function GET(request: NextRequest) {
  */
 export async function POST(request: NextRequest) {
   try {
-    const supabase = await createClient();
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
-
-    if (!user) {
+    const session = await auth();
+    if (!session?.user?.id) {
       return NextResponse.json(
         { success: false, data: null, error: { message: 'Unauthorized', status: 401 } },
         { status: 401 }
       );
     }
+    const userId = session.user.id;
 
     const body = await request.json();
     const parsed = createGoalSchema.safeParse(body);
@@ -176,7 +170,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const goal = await createGoal(supabase, user.id, parsed.data);
+    const goal = await createGoal(userId, parsed.data);
 
     return NextResponse.json(
       { success: true, data: goal, error: null },

@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
-import { createClient } from '@/lib/supabase/server';
-import { createClient as createSupabaseClient } from '@supabase/supabase-js';
+import { auth } from '@/auth';
 import { getGoalsByDeadline } from '@/lib/db/goals';
 import type { Timeline } from '@/lib/db/dashboard';
 
@@ -55,38 +54,14 @@ function getDeadlineDateRange(timeline: Timeline): { startDate: string; endDate:
  */
 export async function GET(request: NextRequest) {
   try {
-    let supabase = await createClient();
-    let {
-      data: { user },
-    } = await supabase.auth.getUser();
-
-    // Bearer token fallback (iOS)
-    if (!user) {
-      const authHeader = request.headers.get('Authorization');
-      if (authHeader?.startsWith('Bearer ')) {
-        const token = authHeader.substring(7);
-        supabase = createSupabaseClient(
-          process.env.SUPABASE_INTERNAL_URL || process.env.NEXT_PUBLIC_SUPABASE_URL!,
-          process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-          {
-            global: {
-              headers: {
-                Authorization: `Bearer ${token}`,
-              },
-            },
-          }
-        );
-        const result = await supabase.auth.getUser(token);
-        user = result.data.user;
-      }
-    }
-
-    if (!user) {
+    const session = await auth();
+    if (!session?.user?.id) {
       return NextResponse.json(
         { success: false, data: null, error: { message: 'Unauthorized', status: 401 } },
         { status: 401 }
       );
     }
+    const userId = session.user.id;
 
     const searchParams = request.nextUrl.searchParams;
     const timelineParam = searchParams.get('timeline') ?? 'week';
@@ -94,7 +69,7 @@ export async function GET(request: NextRequest) {
     const timeline: Timeline = timelineResult.success ? timelineResult.data : 'week';
 
     const { startDate, endDate } = getDeadlineDateRange(timeline);
-    const goals = await getGoalsByDeadline(supabase, user.id, startDate, endDate);
+    const goals = await getGoalsByDeadline(userId, startDate, endDate);
 
     return NextResponse.json({
       success: true,

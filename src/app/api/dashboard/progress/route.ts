@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
-import { createClient } from '@/lib/supabase/server';
-import { createClient as createSupabaseClient } from '@supabase/supabase-js';
+import { auth } from '@/auth';
 import { getGoalsProgressOverTime, type Timeline } from '@/lib/db/dashboard';
 
 const timelineSchema = z.enum(['week', 'month', 'year']);
@@ -27,39 +26,14 @@ const timelineSchema = z.enum(['week', 'month', 'year']);
  */
 export async function GET(request: NextRequest) {
   try {
-    // Try cookie-based auth first (web client)
-    let supabase = await createClient();
-    let {
-      data: { user },
-    } = await supabase.auth.getUser();
-
-    // If no user from cookies, try Bearer token (iOS client)
-    if (!user) {
-      const authHeader = request.headers.get('Authorization');
-      if (authHeader?.startsWith('Bearer ')) {
-        const token = authHeader.substring(7);
-        supabase = createSupabaseClient(
-          process.env.SUPABASE_INTERNAL_URL || process.env.NEXT_PUBLIC_SUPABASE_URL!,
-          process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-          {
-            global: {
-              headers: {
-                Authorization: `Bearer ${token}`,
-              },
-            },
-          }
-        );
-        const result = await supabase.auth.getUser(token);
-        user = result.data.user;
-      }
-    }
-
-    if (!user) {
+    const session = await auth();
+    if (!session?.user?.id) {
       return NextResponse.json(
         { success: false, data: null, error: { message: 'Unauthorized', status: 401 } },
         { status: 401 }
       );
     }
+    const userId = session.user.id;
 
     const searchParams = request.nextUrl.searchParams;
 
@@ -68,7 +42,7 @@ export async function GET(request: NextRequest) {
     const timelineResult = timelineSchema.safeParse(timelineParam);
     const timeline: Timeline = timelineResult.success ? timelineResult.data : 'week';
 
-    const progress = await getGoalsProgressOverTime(supabase, user.id, timeline);
+    const progress = await getGoalsProgressOverTime(userId, timeline);
 
     return NextResponse.json({
       success: true,

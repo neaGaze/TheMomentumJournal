@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
-import { createClient } from '@/lib/supabase/server';
+import { and, eq, inArray } from 'drizzle-orm';
+import { auth } from '@/auth';
+import { db } from '@/db';
+import { goals as goalsTable } from '@/db/schema';
 import {
   getJournalGoals,
   linkJournalToGoals,
@@ -22,20 +25,17 @@ interface RouteParams {
 export async function GET(request: NextRequest, { params }: RouteParams) {
   try {
     const { id } = await params;
-    const supabase = await createClient();
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
-
-    if (!user) {
+    const session = await auth();
+    if (!session?.user?.id) {
       return NextResponse.json(
         { success: false, data: null, error: { message: 'Unauthorized', status: 401 } },
         { status: 401 }
       );
     }
+    const userId = session.user.id;
 
     // Verify journal belongs to user
-    const journal = await getJournalById(supabase, id, user.id);
+    const journal = await getJournalById(id, userId);
     if (!journal) {
       return NextResponse.json(
         { success: false, data: null, error: { message: 'Journal entry not found', status: 404 } },
@@ -43,7 +43,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
       );
     }
 
-    const goals = await getJournalGoals(supabase, id, user.id);
+    const goals = await getJournalGoals(id, userId);
 
     return NextResponse.json({ success: true, data: goals, error: null });
   } catch (error) {
@@ -68,17 +68,14 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
 export async function POST(request: NextRequest, { params }: RouteParams) {
   try {
     const { id } = await params;
-    const supabase = await createClient();
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
-
-    if (!user) {
+    const session = await auth();
+    if (!session?.user?.id) {
       return NextResponse.json(
         { success: false, data: null, error: { message: 'Unauthorized', status: 401 } },
         { status: 401 }
       );
     }
+    const userId = session.user.id;
 
     const body = await request.json();
     const parsed = linkGoalsSchema.safeParse(body);
@@ -99,7 +96,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
     }
 
     // Verify journal belongs to user
-    const journal = await getJournalById(supabase, id, user.id);
+    const journal = await getJournalById(id, userId);
     if (!journal) {
       return NextResponse.json(
         { success: false, data: null, error: { message: 'Journal entry not found', status: 404 } },
@@ -109,17 +106,12 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
 
     // Verify all goals belong to user
     if (parsed.data.goalIds.length > 0) {
-      const { data: goals, error: goalsError } = await supabase
-        .from('goals')
-        .select('id')
-        .in('id', parsed.data.goalIds)
-        .eq('user_id', user.id);
+      const goals = await db
+        .select({ id: goalsTable.id })
+        .from(goalsTable)
+        .where(and(inArray(goalsTable.id, parsed.data.goalIds), eq(goalsTable.userId, userId)));
 
-      if (goalsError) {
-        throw goalsError;
-      }
-
-      const validGoalIds = new Set((goals ?? []).map((g) => g.id));
+      const validGoalIds = new Set(goals.map((g) => g.id));
       const invalidGoalIds = parsed.data.goalIds.filter((gid) => !validGoalIds.has(gid));
 
       if (invalidGoalIds.length > 0) {
@@ -138,13 +130,13 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
     }
 
     // Clear existing links and add new ones
-    await unlinkJournalFromGoals(supabase, id);
+    await unlinkJournalFromGoals(id);
     if (parsed.data.goalIds.length > 0) {
-      await linkJournalToGoals(supabase, id, parsed.data.goalIds);
+      await linkJournalToGoals(id, parsed.data.goalIds);
     }
 
     // Return updated goals
-    const goals = await getJournalGoals(supabase, id, user.id);
+    const goals = await getJournalGoals(id, userId);
 
     return NextResponse.json({ success: true, data: goals, error: null });
   } catch (error) {
@@ -169,20 +161,17 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
 export async function DELETE(request: NextRequest, { params }: RouteParams) {
   try {
     const { id } = await params;
-    const supabase = await createClient();
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
-
-    if (!user) {
+    const session = await auth();
+    if (!session?.user?.id) {
       return NextResponse.json(
         { success: false, data: null, error: { message: 'Unauthorized', status: 401 } },
         { status: 401 }
       );
     }
+    const userId = session.user.id;
 
     // Verify journal belongs to user
-    const journal = await getJournalById(supabase, id, user.id);
+    const journal = await getJournalById(id, userId);
     if (!journal) {
       return NextResponse.json(
         { success: false, data: null, error: { message: 'Journal entry not found', status: 404 } },
@@ -190,7 +179,7 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
       );
     }
 
-    await unlinkJournalFromGoals(supabase, id);
+    await unlinkJournalFromGoals(id);
 
     return NextResponse.json({ success: true, data: [], error: null });
   } catch (error) {

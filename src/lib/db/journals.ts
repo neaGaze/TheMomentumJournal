@@ -3,8 +3,10 @@
  * All functions return domain models (camelCase)
  */
 
-import type { SupabaseClient } from '@supabase/supabase-js';
-import type { JournalEntryRow, GoalRow } from '@/types/database.types';
+import { and, eq, or, ilike, gte, lte, asc, desc, inArray, count, arrayOverlaps, sql } from 'drizzle-orm';
+import { db } from '@/db';
+import { journalEntries, journalGoalMentions, goals } from '@/db/schema';
+import { mapJournalEntry as mapJournal, mapGoal } from '@/db/mappers';
 import type {
   JournalEntry,
   JournalEntryWithGoals,
@@ -15,13 +17,6 @@ import type {
   PaginationParams,
   Goal,
 } from '@/types';
-import {
-  mapJournalEntryFromRow as mapJournal,
-  mapGoalFromRow as mapGoal,
-} from '@/types';
-
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-type SupabaseClientAny = SupabaseClient<any, any, any>;
 
 export interface JournalsQueryResult {
   journals: JournalEntry[];
@@ -39,11 +34,18 @@ export interface GetJournalsOptions {
   pagination?: PaginationParams;
 }
 
+// Map sort field (snake_case API contract) -> Drizzle column
+const JOURNAL_SORT_COLUMNS = {
+  entry_date: journalEntries.entryDate,
+  created_at: journalEntries.createdAt,
+  updated_at: journalEntries.updatedAt,
+  title: journalEntries.title,
+} as const;
+
 /**
  * Get journal entries for a user with optional filtering, sorting, pagination
  */
 export async function getJournalEntries(
-  supabase: SupabaseClientAny,
   userId: string,
   options: GetJournalsOptions = {}
 ): Promise<JournalsQueryResult> {
@@ -52,127 +54,87 @@ export async function getJournalEntries(
   const pageSize = pagination?.pageSize ?? 10;
   const offset = (page - 1) * pageSize;
 
-  let query = supabase
-    .from('journal_entries')
-    .select('*', { count: 'exact' })
-    .eq('user_id', userId);
+  const conditions = [eq(journalEntries.userId, userId)];
 
-  // Apply filters
   if (filters?.mood) {
-    query = query.eq('mood', filters.mood);
+    conditions.push(eq(journalEntries.mood, filters.mood));
   }
   if (filters?.dateFrom) {
-    query = query.gte('entry_date', filters.dateFrom);
+    conditions.push(gte(journalEntries.entryDate, filters.dateFrom));
   }
   if (filters?.dateTo) {
-    query = query.lte('entry_date', filters.dateTo);
+    conditions.push(lte(journalEntries.entryDate, filters.dateTo));
   }
   if (filters?.search) {
-    query = query.or(
-      `title.ilike.%${filters.search}%,content.ilike.%${filters.search}%`
+    conditions.push(
+      or(
+        ilike(journalEntries.title, `%${filters.search}%`),
+        ilike(journalEntries.content, `%${filters.search}%`)
+      )!
     );
   }
   if (filters?.tags && filters.tags.length > 0) {
-    query = query.overlaps('tags', filters.tags);
+    conditions.push(arrayOverlaps(journalEntries.tags, filters.tags));
   }
 
   // Filter by goal mention - requires subquery
   if (filters?.goalId) {
-    const { data: mentionData } = await supabase
-      .from('journal_goal_mentions')
-      .select('journal_entry_id')
-      .eq('goal_id', filters.goalId);
+    const mentionRows = await db
+      .select({ journalEntryId: journalGoalMentions.journalEntryId })
+      .from(journalGoalMentions)
+      .where(eq(journalGoalMentions.goalId, filters.goalId));
 
-    if (mentionData && mentionData.length > 0) {
-      const journalIds = mentionData.map((m: { journal_entry_id: string }) => m.journal_entry_id);
-      query = query.in('id', journalIds);
+    if (mentionRows.length > 0) {
+      conditions.push(
+        inArray(journalEntries.id, mentionRows.map((m) => m.journalEntryId))
+      );
     } else {
-      // No journals mention this goal
       return { journals: [], totalCount: 0 };
     }
   }
 
-  // Apply sorting
+  const where = and(...conditions);
+
   const sortField = sort?.field ?? 'entry_date';
   const sortDir = sort?.direction ?? 'desc';
-  query = query.order(sortField, { ascending: sortDir === 'asc' });
+  const sortCol = JOURNAL_SORT_COLUMNS[sortField] ?? journalEntries.entryDate;
+  const orderBy = sortDir === 'asc' ? asc(sortCol) : desc(sortCol);
 
-  // Apply pagination
-  query = query.range(offset, offset + pageSize - 1);
-
-  const { data, error, count } = await query;
-
-  if (error) {
-    throw new Error(`Failed to fetch journals: ${error.message}`);
-  }
+  const [rows, countRows] = await Promise.all([
+    db.select().from(journalEntries).where(where).orderBy(orderBy).limit(pageSize).offset(offset),
+    db.select({ c: count() }).from(journalEntries).where(where),
+  ]);
 
   return {
-    journals: (data ?? []).map(mapJournal),
-    totalCount: count ?? 0,
+    journals: rows.map(mapJournal),
+    totalCount: countRows[0]?.c ?? 0,
   };
 }
 
 /**
  * Get single journal entry by ID (validates user ownership)
  */
-export async function getJournalById(
-  supabase: SupabaseClientAny,
-  id: string,
-  userId: string
-): Promise<JournalEntry | null> {
-  const { data, error } = await supabase
-    .from('journal_entries')
-    .select('*')
-    .eq('id', id)
-    .eq('user_id', userId)
-    .single();
+export async function getJournalById(id: string, userId: string): Promise<JournalEntry | null> {
+  const rows = await db
+    .select()
+    .from(journalEntries)
+    .where(and(eq(journalEntries.id, id), eq(journalEntries.userId, userId)))
+    .limit(1);
 
-  if (error) {
-    if (error.code === 'PGRST116') {
-      return null; // Not found
-    }
-    throw new Error(`Failed to fetch journal: ${error.message}`);
-  }
-
-  return data ? mapJournal(data) : null;
+  return rows[0] ? mapJournal(rows[0]) : null;
 }
 
 /**
  * Get single journal entry with linked goals
  */
 export async function getJournalWithGoals(
-  supabase: SupabaseClientAny,
   id: string,
   userId: string
 ): Promise<JournalEntryWithGoals | null> {
-  const journal = await getJournalById(supabase, id, userId);
+  const journal = await getJournalById(id, userId);
   if (!journal) return null;
 
-  // Fetch linked goals
-  const { data: mentions, error: mentionsError } = await supabase
-    .from('journal_goal_mentions')
-    .select('goal_id')
-    .eq('journal_entry_id', id);
-
-  if (mentionsError) {
-    throw new Error(`Failed to fetch goal mentions: ${mentionsError.message}`);
-  }
-
-  let mentionedGoals: Goal[] = [];
-  if (mentions && mentions.length > 0) {
-    const goalIds = mentions.map((m: { goal_id: string }) => m.goal_id);
-    const { data: goals, error: goalsError } = await supabase
-      .from('goals')
-      .select('*')
-      .in('id', goalIds)
-      .eq('user_id', userId);
-
-    if (goalsError) {
-      throw new Error(`Failed to fetch linked goals: ${goalsError.message}`);
-    }
-
-    mentionedGoals = (goals ?? []).map(mapGoal);
-  }
+  const mentionedGoals = await getJournalGoals(id, userId);
 
   return {
     ...journal,
@@ -184,60 +146,39 @@ export async function getJournalWithGoals(
  * Create new journal entry
  */
 export async function createJournalEntry(
-  supabase: SupabaseClientAny,
   userId: string,
   input: CreateJournalEntryInput
 ): Promise<JournalEntry> {
-  const insertData = {
-    user_id: userId,
-    title: input.title ?? null,
-    content: input.content,
-    entry_date: input.entryDate ?? new Date().toLocaleDateString('en-CA'),
-    mood: input.mood ?? null,
-    tags: input.tags ?? [],
-  };
+  const rows = await db
+    .insert(journalEntries)
+    .values({
+      userId,
+      title: input.title ?? null,
+      content: input.content,
+      entryDate: input.entryDate ?? new Date().toLocaleDateString('en-CA'),
+      mood: input.mood ?? null,
+      tags: input.tags ?? [],
+    })
+    .returning();
 
-  const { data, error } = await supabase
-    .from('journal_entries')
-    .insert(insertData)
-    .select()
-    .single();
-
-  if (error) {
-    throw new Error(`Failed to create journal: ${error.message}`);
-  }
-
-  return mapJournal(data);
+  return mapJournal(rows[0]);
 }
 
 /**
  * Create journal entry with goal links (transactional)
  */
 export async function createJournalEntryWithGoals(
-  supabase: SupabaseClientAny,
   userId: string,
   input: CreateJournalEntryInput
 ): Promise<JournalEntryWithGoals> {
   // Create journal entry
-  const journal = await createJournalEntry(supabase, userId, input);
+  const journal = await createJournalEntry(userId, input);
 
   // Link goals if provided
   let mentionedGoals: Goal[] = [];
   if (input.goalIds && input.goalIds.length > 0) {
-    await linkJournalToGoals(supabase, journal.id, input.goalIds);
-
-    // Fetch linked goals
-    const { data: goals, error: goalsError } = await supabase
-      .from('goals')
-      .select('*')
-      .in('id', input.goalIds)
-      .eq('user_id', userId);
-
-    if (goalsError) {
-      throw new Error(`Failed to fetch linked goals: ${goalsError.message}`);
-    }
-
-    mentionedGoals = (goals ?? []).map(mapGoal);
+    await linkJournalToGoals(journal.id, input.goalIds);
+    mentionedGoals = await fetchGoalsByIds(input.goalIds, userId);
   }
 
   return {
@@ -250,7 +191,6 @@ export async function createJournalEntryWithGoals(
  * Update existing journal entry (validates user ownership)
  */
 export async function updateJournalEntry(
-  supabase: SupabaseClientAny,
   id: string,
   userId: string,
   input: UpdateJournalEntryInput
@@ -259,84 +199,50 @@ export async function updateJournalEntry(
 
   if (input.title !== undefined) updateData.title = input.title;
   if (input.content !== undefined) updateData.content = input.content;
-  if (input.entryDate !== undefined) updateData.entry_date = input.entryDate;
+  if (input.entryDate !== undefined) updateData.entryDate = input.entryDate;
   if (input.mood !== undefined) updateData.mood = input.mood;
   if (input.tags !== undefined) updateData.tags = input.tags;
 
-  // Always update timestamp
-  updateData.updated_at = new Date().toISOString();
-
-  const { data, error } = await supabase
-    .from('journal_entries')
-    .update(updateData)
-    .eq('id', id)
-    .eq('user_id', userId)
-    .select()
-    .single();
-
-  if (error) {
-    if (error.code === 'PGRST116') {
-      return null; // Not found or no permission
-    }
-    throw new Error(`Failed to update journal: ${error.message}`);
+  // updated_at maintained by DB trigger; nothing to update -> return current
+  if (Object.keys(updateData).length === 0) {
+    return getJournalById(id, userId);
   }
 
-  return data ? mapJournal(data) : null;
+  const rows = await db
+    .update(journalEntries)
+    .set(updateData)
+    .where(and(eq(journalEntries.id, id), eq(journalEntries.userId, userId)))
+    .returning();
+
+  return rows[0] ? mapJournal(rows[0]) : null;
 }
 
 /**
  * Update journal entry with goal links
  */
 export async function updateJournalEntryWithGoals(
-  supabase: SupabaseClientAny,
   id: string,
   userId: string,
   input: UpdateJournalEntryInput
 ): Promise<JournalEntryWithGoals | null> {
   // First update the journal entry fields
-  const journal = await updateJournalEntry(supabase, id, userId, input);
+  const journal = await updateJournalEntry(id, userId, input);
   if (!journal) return null;
 
   // If goalIds provided, replace all goal links
   let mentionedGoals: Goal[] = [];
   if (input.goalIds !== undefined) {
     // Remove all existing links
-    await unlinkJournalFromGoals(supabase, id);
+    await unlinkJournalFromGoals(id);
 
     // Add new links
     if (input.goalIds.length > 0) {
-      await linkJournalToGoals(supabase, id, input.goalIds);
-
-      // Fetch linked goals
-      const { data: goals, error: goalsError } = await supabase
-        .from('goals')
-        .select('*')
-        .in('id', input.goalIds)
-        .eq('user_id', userId);
-
-      if (goalsError) {
-        throw new Error(`Failed to fetch linked goals: ${goalsError.message}`);
-      }
-
-      mentionedGoals = (goals ?? []).map(mapGoal);
+      await linkJournalToGoals(id, input.goalIds);
+      mentionedGoals = await fetchGoalsByIds(input.goalIds, userId);
     }
   } else {
     // Fetch existing links
-    const { data: mentions } = await supabase
-      .from('journal_goal_mentions')
-      .select('goal_id')
-      .eq('journal_entry_id', id);
-
-    if (mentions && mentions.length > 0) {
-      const goalIds = mentions.map((m: { goal_id: string }) => m.goal_id);
-      const { data: goals } = await supabase
-        .from('goals')
-        .select('*')
-        .in('id', goalIds)
-        .eq('user_id', userId);
-
-      mentionedGoals = (goals ?? []).map(mapGoal);
-    }
+    mentionedGoals = await getJournalGoals(id, userId);
   }
 
   return {
@@ -348,35 +254,24 @@ export async function updateJournalEntryWithGoals(
 /**
  * Delete journal entry (hard delete, validates user ownership)
  */
-export async function deleteJournalEntry(
-  supabase: SupabaseClientAny,
-  id: string,
-  userId: string
-): Promise<boolean> {
+export async function deleteJournalEntry(id: string, userId: string): Promise<boolean> {
   // Delete goal mentions first (foreign key constraint)
-  await supabase
-    .from('journal_goal_mentions')
-    .delete()
-    .eq('journal_entry_id', id);
+  await db
+    .delete(journalGoalMentions)
+    .where(eq(journalGoalMentions.journalEntryId, id));
 
-  const { error, count } = await supabase
-    .from('journal_entries')
-    .delete({ count: 'exact' })
-    .eq('id', id)
-    .eq('user_id', userId);
+  const rows = await db
+    .delete(journalEntries)
+    .where(and(eq(journalEntries.id, id), eq(journalEntries.userId, userId)))
+    .returning({ id: journalEntries.id });
 
-  if (error) {
-    throw new Error(`Failed to delete journal: ${error.message}`);
-  }
-
-  return (count ?? 0) > 0;
+  return rows.length > 0;
 }
 
 /**
  * Link journal entry to goals (create mentions)
  */
 export async function linkJournalToGoals(
-  supabase: SupabaseClientAny,
   journalId: string,
   goalIds: string[],
   mentionedExplicitly: boolean = true
@@ -384,88 +279,69 @@ export async function linkJournalToGoals(
   if (goalIds.length === 0) return;
 
   const insertData = goalIds.map((goalId) => ({
-    journal_entry_id: journalId,
-    goal_id: goalId,
-    mentioned_explicitly: mentionedExplicitly,
+    journalEntryId: journalId,
+    goalId,
+    mentionedExplicitly,
   }));
 
-  const { error } = await supabase
-    .from('journal_goal_mentions')
-    .upsert(insertData, {
-      onConflict: 'journal_entry_id,goal_id',
-      ignoreDuplicates: true,
+  // Upsert ignoring duplicates on (journal_entry_id, goal_id)
+  await db
+    .insert(journalGoalMentions)
+    .values(insertData)
+    .onConflictDoNothing({
+      target: [journalGoalMentions.journalEntryId, journalGoalMentions.goalId],
     });
-
-  if (error) {
-    throw new Error(`Failed to link goals: ${error.message}`);
-  }
 }
 
 /**
  * Unlink journal entry from goals (remove mentions)
  */
 export async function unlinkJournalFromGoals(
-  supabase: SupabaseClientAny,
   journalId: string,
   goalIds?: string[]
 ): Promise<void> {
-  let query = supabase
-    .from('journal_goal_mentions')
-    .delete()
-    .eq('journal_entry_id', journalId);
-
+  const conditions = [eq(journalGoalMentions.journalEntryId, journalId)];
   if (goalIds && goalIds.length > 0) {
-    query = query.in('goal_id', goalIds);
+    conditions.push(inArray(journalGoalMentions.goalId, goalIds));
   }
 
-  const { error } = await query;
+  await db.delete(journalGoalMentions).where(and(...conditions));
+}
 
-  if (error) {
-    throw new Error(`Failed to unlink goals: ${error.message}`);
-  }
+/** Fetch goals owned by user matching ids (helper) */
+async function fetchGoalsByIds(goalIds: string[], userId: string): Promise<Goal[]> {
+  if (goalIds.length === 0) return [];
+  const rows = await db
+    .select()
+    .from(goals)
+    .where(and(inArray(goals.id, goalIds), eq(goals.userId, userId)));
+  return rows.map(mapGoal);
 }
 
 /**
  * Get goals linked to a journal entry
  */
 export async function getJournalGoals(
-  supabase: SupabaseClientAny,
   journalId: string,
   userId: string
 ): Promise<Goal[]> {
-  const { data: mentions, error: mentionsError } = await supabase
-    .from('journal_goal_mentions')
-    .select('goal_id')
-    .eq('journal_entry_id', journalId);
+  const mentions = await db
+    .select({ goalId: journalGoalMentions.goalId })
+    .from(journalGoalMentions)
+    .where(eq(journalGoalMentions.journalEntryId, journalId));
 
-  if (mentionsError) {
-    throw new Error(`Failed to fetch goal mentions: ${mentionsError.message}`);
-  }
-
-  if (!mentions || mentions.length === 0) {
+  if (mentions.length === 0) {
     return [];
   }
 
-  const goalIds = mentions.map((m: { goal_id: string }) => m.goal_id);
-  const { data: goals, error: goalsError } = await supabase
-    .from('goals')
-    .select('*')
-    .in('id', goalIds)
-    .eq('user_id', userId);
-
-  if (goalsError) {
-    throw new Error(`Failed to fetch linked goals: ${goalsError.message}`);
-  }
-
-  return (goals ?? []).map(mapGoal);
+  return fetchGoalsByIds(mentions.map((m) => m.goalId), userId);
 }
 
 /**
  * Get journal entries with linked goals (solves N+1 query problem)
- * Single query fetches all journals with their mentionedGoals
+ * Single relational query fetches all journals with their mentionedGoals
  */
 export async function getJournalEntriesWithGoals(
-  supabase: SupabaseClientAny,
   userId: string,
   options: GetJournalsOptions = {}
 ): Promise<JournalsWithGoalsQueryResult> {
@@ -474,111 +350,99 @@ export async function getJournalEntriesWithGoals(
   const pageSize = pagination?.pageSize ?? 10;
   const offset = (page - 1) * pageSize;
 
-  // Build base query with relationship loading
-  let query = supabase
-    .from('journal_entries')
-    .select(
-      `
-      *,
-      journal_goal_mentions (
-        goal_id,
-        goals (*)
-      )
-    `,
-      { count: 'exact' }
-    )
-    .eq('user_id', userId);
+  const conditions = [eq(journalEntries.userId, userId)];
 
-  // Apply filters
   if (filters?.mood) {
-    query = query.eq('mood', filters.mood);
+    conditions.push(eq(journalEntries.mood, filters.mood));
   }
   if (filters?.dateFrom) {
-    query = query.gte('entry_date', filters.dateFrom);
+    conditions.push(gte(journalEntries.entryDate, filters.dateFrom));
   }
   if (filters?.dateTo) {
-    query = query.lte('entry_date', filters.dateTo);
+    conditions.push(lte(journalEntries.entryDate, filters.dateTo));
   }
   if (filters?.search) {
-    query = query.or(
-      `title.ilike.%${filters.search}%,content.ilike.%${filters.search}%`
+    conditions.push(
+      or(
+        ilike(journalEntries.title, `%${filters.search}%`),
+        ilike(journalEntries.content, `%${filters.search}%`)
+      )!
     );
   }
   if (filters?.tags && filters.tags.length > 0) {
-    query = query.overlaps('tags', filters.tags);
+    conditions.push(arrayOverlaps(journalEntries.tags, filters.tags));
   }
 
   // Filter by goal mention - requires subquery
   if (filters?.goalId) {
-    const { data: mentionData } = await supabase
-      .from('journal_goal_mentions')
-      .select('journal_entry_id')
-      .eq('goal_id', filters.goalId);
+    const mentionRows = await db
+      .select({ journalEntryId: journalGoalMentions.journalEntryId })
+      .from(journalGoalMentions)
+      .where(eq(journalGoalMentions.goalId, filters.goalId));
 
-    if (mentionData && mentionData.length > 0) {
-      const journalIds = mentionData.map(
-        (m: { journal_entry_id: string }) => m.journal_entry_id
+    if (mentionRows.length > 0) {
+      conditions.push(
+        inArray(journalEntries.id, mentionRows.map((m) => m.journalEntryId))
       );
-      query = query.in('id', journalIds);
     } else {
       return { journals: [], totalCount: 0 };
     }
   }
 
-  // Apply sorting
+  const where = and(...conditions);
+
   const sortField = sort?.field ?? 'entry_date';
   const sortDir = sort?.direction ?? 'desc';
-  query = query.order(sortField, { ascending: sortDir === 'asc' });
+  const sortCol = JOURNAL_SORT_COLUMNS[sortField] ?? journalEntries.entryDate;
+  const orderBy = sortDir === 'asc' ? asc(sortCol) : desc(sortCol);
 
-  // Apply pagination
-  query = query.range(offset, offset + pageSize - 1);
+  const [rows, countRows] = await Promise.all([
+    db.query.journalEntries.findMany({
+      where,
+      orderBy,
+      limit: pageSize,
+      offset,
+      with: {
+        mentions: {
+          with: {
+            goal: true,
+          },
+        },
+      },
+    }),
+    db.select({ c: count() }).from(journalEntries).where(where),
+  ]);
 
-  const { data, error, count } = await query;
+  const journals: JournalEntryWithGoals[] = rows.map((row) => {
+    const { mentions, ...entry } = row;
+    const journalEntry = mapJournal(entry);
+    const mentionedGoals: Goal[] = (mentions ?? [])
+      .filter((m) => m.goal !== null && m.goal !== undefined)
+      .map((m) => mapGoal(m.goal));
 
-  if (error) {
-    throw new Error(`Failed to fetch journals: ${error.message}`);
-  }
-
-  // Transform nested data into JournalEntryWithGoals[]
-  const journals: JournalEntryWithGoals[] = (data ?? []).map(
-    (row: JournalEntryRow & { journal_goal_mentions?: Array<{ goal_id: string; goals: GoalRow | null }> }) => {
-      const journalEntry = mapJournal(row);
-      const mentionedGoals: Goal[] = (row.journal_goal_mentions ?? [])
-        .filter((m) => m.goals !== null)
-        .map((m) => mapGoal(m.goals as GoalRow));
-
-      return {
-        ...journalEntry,
-        mentionedGoals,
-      };
-    }
-  );
+    return {
+      ...journalEntry,
+      mentionedGoals,
+    };
+  });
 
   return {
     journals,
-    totalCount: count ?? 0,
+    totalCount: countRows[0]?.c ?? 0,
   };
 }
 
 /**
  * Get unique tags for a user (for filter dropdowns)
  */
-export async function getJournalTags(
-  supabase: SupabaseClientAny,
-  userId: string
-): Promise<string[]> {
-  const { data, error } = await supabase
-    .from('journal_entries')
-    .select('tags')
-    .eq('user_id', userId)
-    .not('tags', 'is', null);
-
-  if (error) {
-    throw new Error(`Failed to fetch tags: ${error.message}`);
-  }
+export async function getJournalTags(userId: string): Promise<string[]> {
+  const rows = await db
+    .select({ tags: journalEntries.tags })
+    .from(journalEntries)
+    .where(and(eq(journalEntries.userId, userId), sql`${journalEntries.tags} IS NOT NULL`));
 
   const tags = new Set<string>();
-  for (const row of data ?? []) {
+  for (const row of rows) {
     if (row.tags && Array.isArray(row.tags)) {
       for (const tag of row.tags) {
         tags.add(tag);

@@ -8,12 +8,6 @@ import type {
   GoalStatus,
   AnalysisType,
   Mood,
-  GoalRow,
-  JournalEntryRow,
-  ProfileRow,
-  AIAnalysisRow,
-  WeeklyInsightRow,
-  JournalGoalMentionRow,
   AIAnalysisInsights,
   AIAnalysisRecommendations,
   AIProgressSummary,
@@ -274,92 +268,6 @@ export interface JournalSortOptions {
 export interface PaginationParams {
   page?: number;
   pageSize?: number;
-}
-
-// ============================================
-// Mapper Functions (DB Row <-> Domain Model)
-// ============================================
-
-export function mapProfileFromRow(row: ProfileRow): Profile {
-  return {
-    id: row.id,
-    email: row.email,
-    fullName: row.full_name,
-    avatarUrl: row.avatar_url,
-    createdAt: new Date(row.created_at),
-    updatedAt: new Date(row.updated_at),
-  };
-}
-
-export function mapGoalFromRow(row: GoalRow): Goal {
-  return {
-    id: row.id,
-    userId: row.user_id,
-    title: row.title,
-    description: row.description,
-    type: row.type,
-    category: row.category,
-    targetDate: row.target_date ? new Date(row.target_date) : null,
-    status: row.status,
-    progressPercentage: row.progress_percentage,
-    parentGoalId: row.parent_goal_id,
-    createdAt: new Date(row.created_at),
-    updatedAt: new Date(row.updated_at),
-  };
-}
-
-export function mapJournalEntryFromRow(row: JournalEntryRow): JournalEntry {
-  return {
-    id: row.id,
-    userId: row.user_id,
-    title: row.title,
-    content: row.content,
-    entryDate: row.entry_date,
-    mood: row.mood as Mood | null,
-    tags: row.tags ?? [],
-    createdAt: new Date(row.created_at),
-    updatedAt: new Date(row.updated_at),
-  };
-}
-
-export function mapJournalGoalMentionFromRow(row: JournalGoalMentionRow): JournalGoalMention {
-  return {
-    id: row.id,
-    journalEntryId: row.journal_entry_id,
-    goalId: row.goal_id,
-    mentionedExplicitly: row.mentioned_explicitly,
-    createdAt: new Date(row.created_at),
-  };
-}
-
-export function mapAIAnalysisFromRow(row: AIAnalysisRow): AIAnalysis {
-  return {
-    id: row.id,
-    userId: row.user_id,
-    analysisType: row.analysis_type,
-    journalEntriesAnalyzed: row.journal_entries_analyzed,
-    goalsAnalyzed: row.goals_analyzed,
-    insights: row.insights,
-    recommendations: row.recommendations,
-    progressSummary: row.progress_summary,
-    tokensUsed: row.tokens_used,
-    createdAt: new Date(row.created_at),
-  };
-}
-
-export function mapWeeklyInsightFromRow(row: WeeklyInsightRow): WeeklyInsight {
-  return {
-    id: row.id,
-    userId: row.user_id,
-    weekStartDate: new Date(row.week_start_date),
-    weekEndDate: new Date(row.week_end_date),
-    summary: row.summary,
-    keyAchievements: row.key_achievements,
-    areasForImprovement: row.areas_for_improvement,
-    goalProgressUpdates: row.goal_progress_updates,
-    aiAnalysisId: row.ai_analysis_id,
-    createdAt: new Date(row.created_at),
-  };
 }
 
 // ============================================

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
-import { createClient } from '@/lib/supabase/server';
+import { auth } from '@/auth';
 import {
   getJournalWithGoals,
   updateJournalEntryWithGoals,
@@ -44,19 +44,16 @@ export async function GET(request: NextRequest, context: RouteContext) {
       );
     }
 
-    const supabase = await createClient();
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
-
-    if (!user) {
+    const session = await auth();
+    if (!session?.user?.id) {
       return NextResponse.json(
         { success: false, data: null, error: { message: 'Unauthorized', status: 401 } },
         { status: 401 }
       );
     }
+    const userId = session.user.id;
 
-    const journal = await getJournalWithGoals(supabase, id, user.id);
+    const journal = await getJournalWithGoals(id, userId);
 
     if (!journal) {
       return NextResponse.json(
@@ -96,17 +93,14 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
       );
     }
 
-    const supabase = await createClient();
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
-
-    if (!user) {
+    const session = await auth();
+    if (!session?.user?.id) {
       return NextResponse.json(
         { success: false, data: null, error: { message: 'Unauthorized', status: 401 } },
         { status: 401 }
       );
     }
+    const userId = session.user.id;
 
     const body = await request.json();
     const parsed = updateJournalSchema.safeParse(body);
@@ -126,7 +120,7 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
       );
     }
 
-    const journal = await updateJournalEntryWithGoals(supabase, id, user.id, parsed.data);
+    const journal = await updateJournalEntryWithGoals(id, userId, parsed.data);
 
     if (!journal) {
       return NextResponse.json(
@@ -166,19 +160,16 @@ export async function DELETE(request: NextRequest, context: RouteContext) {
       );
     }
 
-    const supabase = await createClient();
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
-
-    if (!user) {
+    const session = await auth();
+    if (!session?.user?.id) {
       return NextResponse.json(
         { success: false, data: null, error: { message: 'Unauthorized', status: 401 } },
         { status: 401 }
       );
     }
+    const userId = session.user.id;
 
-    const deleted = await deleteJournalEntry(supabase, id, user.id);
+    const deleted = await deleteJournalEntry(id, userId);
 
     if (!deleted) {
       return NextResponse.json(

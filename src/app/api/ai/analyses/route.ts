@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
-import { createClient } from '@/lib/supabase/server';
+import { auth } from '@/auth';
 import { getAnalyses, type AnalysisFilters } from '@/lib/db/ai';
 import type { PaginationParams } from '@/types';
 
@@ -12,17 +12,14 @@ const analysisTypeSchema = z.enum(['on-demand', 'weekly', 'monthly']);
  */
 export async function GET(request: NextRequest) {
   try {
-    const supabase = await createClient();
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
-
-    if (!user) {
+    const session = await auth();
+    if (!session?.user?.id) {
       return NextResponse.json(
         { success: false, data: null, error: { message: 'Unauthorized', status: 401 } },
         { status: 401 }
       );
     }
+    const userId = session.user.id;
 
     const searchParams = request.nextUrl.searchParams;
 
@@ -52,7 +49,7 @@ export async function GET(request: NextRequest) {
       ),
     };
 
-    const result = await getAnalyses(supabase, user.id, filters, pagination);
+    const result = await getAnalyses(userId, filters, pagination);
 
     const totalPages = Math.ceil(result.totalCount / (pagination.pageSize ?? 10));
 

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
-import { createClient } from '@/lib/supabase/server';
+import { auth } from '@/auth';
 import { linkGoalToParent, unlinkGoalFromParent, getGoalWithParent, getGoalWithChildren, getGoalById } from '@/lib/db/goals';
 import { GoalLinkValidationError, GOAL_LINK_ERROR_CODES } from '@/types';
 
@@ -27,18 +27,17 @@ export async function GET(request: NextRequest, context: RouteContext) {
       );
     }
 
-    const supabase = await createClient();
-    const { data: { user } } = await supabase.auth.getUser();
-
-    if (!user) {
+    const session = await auth();
+    if (!session?.user?.id) {
       return NextResponse.json(
         { success: false, data: null, error: { message: 'Unauthorized', status: 401 } },
         { status: 401 }
       );
     }
+    const userId = session.user.id;
 
     // Try to get with parent first (works for short-term goals)
-    const withParent = await getGoalWithParent(supabase, id, user.id);
+    const withParent = await getGoalWithParent(id, userId);
     if (!withParent) {
       return NextResponse.json(
         { success: false, data: null, error: { message: 'Goal not found', status: 404 } },
@@ -48,7 +47,7 @@ export async function GET(request: NextRequest, context: RouteContext) {
 
     // If long-term goal, get children instead
     if (withParent.goal.type === 'long-term') {
-      const withChildren = await getGoalWithChildren(supabase, id, user.id);
+      const withChildren = await getGoalWithChildren(id, userId);
       return NextResponse.json({
         success: true,
         data: {
@@ -99,15 +98,14 @@ export async function POST(request: NextRequest, context: RouteContext) {
       );
     }
 
-    const supabase = await createClient();
-    const { data: { user } } = await supabase.auth.getUser();
-
-    if (!user) {
+    const session = await auth();
+    if (!session?.user?.id) {
       return NextResponse.json(
         { success: false, data: null, error: { message: 'Unauthorized', status: 401 } },
         { status: 401 }
       );
     }
+    const userId = session.user.id;
 
     const body = await request.json();
     const parsed = linkSchema.safeParse(body);
@@ -128,7 +126,7 @@ export async function POST(request: NextRequest, context: RouteContext) {
     }
 
     // Explicit parent type validation before linking (Issue #8)
-    const parentGoal = await getGoalById(supabase, parsed.data.parentGoalId, user.id);
+    const parentGoal = await getGoalById(parsed.data.parentGoalId, userId);
     if (!parentGoal) {
       return NextResponse.json(
         {
@@ -158,7 +156,7 @@ export async function POST(request: NextRequest, context: RouteContext) {
       );
     }
 
-    const goal = await linkGoalToParent(supabase, id, parsed.data.parentGoalId, user.id);
+    const goal = await linkGoalToParent(id, parsed.data.parentGoalId, userId);
 
     return NextResponse.json({ success: true, data: goal, error: null });
   } catch (error) {
@@ -203,17 +201,16 @@ export async function DELETE(request: NextRequest, context: RouteContext) {
       );
     }
 
-    const supabase = await createClient();
-    const { data: { user } } = await supabase.auth.getUser();
-
-    if (!user) {
+    const session = await auth();
+    if (!session?.user?.id) {
       return NextResponse.json(
         { success: false, data: null, error: { message: 'Unauthorized', status: 401 } },
         { status: 401 }
       );
     }
+    const userId = session.user.id;
 
-    const goal = await unlinkGoalFromParent(supabase, id, user.id);
+    const goal = await unlinkGoalFromParent(id, userId);
 
     return NextResponse.json({ success: true, data: goal, error: null });
   } catch (error) {

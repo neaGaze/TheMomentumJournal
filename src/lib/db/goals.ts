@@ -3,8 +3,10 @@
  * All functions return domain models (camelCase)
  */
 
-import type { SupabaseClient } from '@supabase/supabase-js';
-import type { GoalRow } from '@/types/database.types';
+import { and, eq, or, ilike, isNull, isNotNull, gte, lte, asc, desc, count } from 'drizzle-orm';
+import { db } from '@/db';
+import { goals } from '@/db/schema';
+import { mapGoal } from '@/db/mappers';
 import type {
   Goal,
   GoalFilters,
@@ -13,10 +15,7 @@ import type {
   UpdateGoalInput,
   PaginationParams,
 } from '@/types';
-import { mapGoalFromRow as mapGoal, GoalLinkValidationError, GOAL_LINK_ERROR_CODES } from '@/types';
-
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-type SupabaseClientAny = SupabaseClient<any, any, any>;
+import { GoalLinkValidationError, GOAL_LINK_ERROR_CODES } from '@/types';
 
 export interface GoalsQueryResult {
   goals: Goal[];
@@ -29,11 +28,19 @@ export interface GetGoalsOptions {
   pagination?: PaginationParams;
 }
 
+// Map sort field (snake_case API contract) -> Drizzle column
+const GOAL_SORT_COLUMNS = {
+  title: goals.title,
+  created_at: goals.createdAt,
+  updated_at: goals.updatedAt,
+  target_date: goals.targetDate,
+  progress_percentage: goals.progressPercentage,
+} as const;
+
 /**
  * Get goals for a user with optional filtering, sorting, pagination
  */
 export async function getGoals(
-  supabase: SupabaseClientAny,
   userId: string,
   options: GetGoalsOptions = {}
 ): Promise<GoalsQueryResult> {
@@ -42,124 +49,95 @@ export async function getGoals(
   const pageSize = pagination?.pageSize ?? 10;
   const offset = (page - 1) * pageSize;
 
-  let query = supabase
-    .from('goals')
-    .select('*', { count: 'exact' })
-    .eq('user_id', userId);
+  const conditions = [eq(goals.userId, userId)];
 
-  // Apply filters
   if (filters?.type) {
-    query = query.eq('type', filters.type);
+    conditions.push(eq(goals.type, filters.type));
   }
   if (filters?.status) {
-    query = query.eq('status', filters.status);
+    conditions.push(eq(goals.status, filters.status));
   }
   if (filters?.category) {
-    query = query.eq('category', filters.category);
+    conditions.push(eq(goals.category, filters.category));
   }
   if (filters?.search) {
-    query = query.or(
-      `title.ilike.%${filters.search}%,description.ilike.%${filters.search}%`
+    conditions.push(
+      or(
+        ilike(goals.title, `%${filters.search}%`),
+        ilike(goals.description, `%${filters.search}%`)
+      )!
     );
   }
   if (filters?.parentGoalId !== undefined) {
     if (filters.parentGoalId === null) {
-      query = query.is('parent_goal_id', null);
+      conditions.push(isNull(goals.parentGoalId));
     } else {
-      query = query.eq('parent_goal_id', filters.parentGoalId);
+      conditions.push(eq(goals.parentGoalId, filters.parentGoalId));
     }
   }
   if (filters?.hasParent !== undefined) {
-    if (filters.hasParent) {
-      query = query.not('parent_goal_id', 'is', null);
-    } else {
-      query = query.is('parent_goal_id', null);
-    }
+    conditions.push(
+      filters.hasParent ? isNotNull(goals.parentGoalId) : isNull(goals.parentGoalId)
+    );
   }
 
-  // Apply sorting
+  const where = and(...conditions);
+
   const sortField = sort?.field ?? 'created_at';
   const sortDir = sort?.direction ?? 'desc';
-  query = query.order(sortField, { ascending: sortDir === 'asc' });
+  const sortCol = GOAL_SORT_COLUMNS[sortField] ?? goals.createdAt;
+  const orderBy = sortDir === 'asc' ? asc(sortCol) : desc(sortCol);
 
-  // Apply pagination
-  query = query.range(offset, offset + pageSize - 1);
-
-  const { data, error, count } = await query;
-
-  if (error) {
-    throw new Error(`Failed to fetch goals: ${error.message}`);
-  }
+  const [rows, countRows] = await Promise.all([
+    db.select().from(goals).where(where).orderBy(orderBy).limit(pageSize).offset(offset),
+    db.select({ c: count() }).from(goals).where(where),
+  ]);
 
   return {
-    goals: (data ?? []).map(mapGoal),
-    totalCount: count ?? 0,
+    goals: rows.map(mapGoal),
+    totalCount: countRows[0]?.c ?? 0,
   };
 }
 
 /**
  * Get single goal by ID (validates user ownership)
  */
-export async function getGoalById(
-  supabase: SupabaseClientAny,
-  id: string,
-  userId: string
-): Promise<Goal | null> {
-  const { data, error } = await supabase
-    .from('goals')
-    .select('*')
-    .eq('id', id)
-    .eq('user_id', userId)
-    .single();
+export async function getGoalById(id: string, userId: string): Promise<Goal | null> {
+  const rows = await db
+    .select()
+    .from(goals)
+    .where(and(eq(goals.id, id), eq(goals.userId, userId)))
+    .limit(1);
 
-  if (error) {
-    if (error.code === 'PGRST116') {
-      return null; // Not found
-    }
-    throw new Error(`Failed to fetch goal: ${error.message}`);
-  }
-
-  return data ? mapGoal(data) : null;
+  return rows[0] ? mapGoal(rows[0]) : null;
 }
 
 /**
  * Create new goal
  */
-export async function createGoal(
-  supabase: SupabaseClientAny,
-  userId: string,
-  input: CreateGoalInput
-): Promise<Goal> {
-  const insertData = {
-    user_id: userId,
-    title: input.title,
-    description: input.description ?? null,
-    type: input.type,
-    category: input.category ?? null,
-    target_date: input.targetDate ?? null,
-    status: input.status ?? 'active',
-    progress_percentage: input.progressPercentage ?? 0,
-    parent_goal_id: input.parentGoalId ?? null,
-  };
+export async function createGoal(userId: string, input: CreateGoalInput): Promise<Goal> {
+  const rows = await db
+    .insert(goals)
+    .values({
+      userId,
+      title: input.title,
+      description: input.description ?? null,
+      type: input.type,
+      category: input.category ?? null,
+      targetDate: input.targetDate ?? null,
+      status: input.status ?? 'active',
+      progressPercentage: input.progressPercentage ?? 0,
+      parentGoalId: input.parentGoalId ?? null,
+    })
+    .returning();
 
-  const { data, error } = await supabase
-    .from('goals')
-    .insert(insertData)
-    .select()
-    .single();
-
-  if (error) {
-    throw new Error(`Failed to create goal: ${error.message}`);
-  }
-
-  return mapGoal(data);
+  return mapGoal(rows[0]);
 }
 
 /**
  * Update existing goal (validates user ownership)
  */
 export async function updateGoal(
-  supabase: SupabaseClientAny,
   id: string,
   userId: string,
   input: UpdateGoalInput
@@ -170,76 +148,52 @@ export async function updateGoal(
   if (input.description !== undefined) updateData.description = input.description;
   if (input.type !== undefined) updateData.type = input.type;
   if (input.category !== undefined) updateData.category = input.category;
-  if (input.targetDate !== undefined) updateData.target_date = input.targetDate;
+  if (input.targetDate !== undefined) updateData.targetDate = input.targetDate;
   if (input.status !== undefined) updateData.status = input.status;
   if (input.progressPercentage !== undefined) {
-    updateData.progress_percentage = input.progressPercentage;
+    updateData.progressPercentage = input.progressPercentage;
   }
   if (input.parentGoalId !== undefined) {
-    updateData.parent_goal_id = input.parentGoalId;
+    updateData.parentGoalId = input.parentGoalId;
   }
 
-  // Always update timestamp
-  updateData.updated_at = new Date().toISOString();
-
-  const { data, error } = await supabase
-    .from('goals')
-    .update(updateData)
-    .eq('id', id)
-    .eq('user_id', userId)
-    .select()
-    .single();
-
-  if (error) {
-    if (error.code === 'PGRST116') {
-      return null; // Not found or no permission
-    }
-    throw new Error(`Failed to update goal: ${error.message}`);
+  // updated_at maintained by DB trigger; nothing to update -> return current
+  if (Object.keys(updateData).length === 0) {
+    return getGoalById(id, userId);
   }
 
-  return data ? mapGoal(data) : null;
+  const rows = await db
+    .update(goals)
+    .set(updateData)
+    .where(and(eq(goals.id, id), eq(goals.userId, userId)))
+    .returning();
+
+  return rows[0] ? mapGoal(rows[0]) : null;
 }
 
 /**
  * Delete goal (hard delete, validates user ownership)
  */
-export async function deleteGoal(
-  supabase: SupabaseClientAny,
-  id: string,
-  userId: string
-): Promise<boolean> {
-  const { error, count } = await supabase
-    .from('goals')
-    .delete({ count: 'exact' })
-    .eq('id', id)
-    .eq('user_id', userId);
+export async function deleteGoal(id: string, userId: string): Promise<boolean> {
+  const rows = await db
+    .delete(goals)
+    .where(and(eq(goals.id, id), eq(goals.userId, userId)))
+    .returning({ id: goals.id });
 
-  if (error) {
-    throw new Error(`Failed to delete goal: ${error.message}`);
-  }
-
-  return (count ?? 0) > 0;
+  return rows.length > 0;
 }
 
 /**
  * Get unique categories for a user (for filter dropdowns)
  */
-export async function getGoalCategories(
-  supabase: SupabaseClientAny,
-  userId: string
-): Promise<string[]> {
-  const { data, error } = await supabase
-    .from('goals')
-    .select('category')
-    .eq('user_id', userId)
-    .not('category', 'is', null);
-
-  if (error) {
-    throw new Error(`Failed to fetch categories: ${error.message}`);
-  }
+export async function getGoalCategories(userId: string): Promise<string[]> {
+  const rows = await db
+    .select({ category: goals.category })
+    .from(goals)
+    .where(and(eq(goals.userId, userId), isNotNull(goals.category)));
 
   const categories = new Set<string>();
-  for (const row of data ?? []) {
+  for (const row of rows) {
     if (row.category) {
       categories.add(row.category);
     }
@@ -252,38 +206,31 @@ export async function getGoalCategories(
  * Get child goals (short-term) for a long-term goal
  */
 export async function getChildGoals(
-  supabase: SupabaseClientAny,
   parentGoalId: string,
   userId: string
 ): Promise<Goal[]> {
-  const { data, error } = await supabase
-    .from('goals')
-    .select('*')
-    .eq('parent_goal_id', parentGoalId)
-    .eq('user_id', userId)
-    .order('created_at', { ascending: false });
+  const rows = await db
+    .select()
+    .from(goals)
+    .where(and(eq(goals.parentGoalId, parentGoalId), eq(goals.userId, userId)))
+    .orderBy(desc(goals.createdAt));
 
-  if (error) {
-    throw new Error(`Failed to fetch child goals: ${error.message}`);
-  }
-
-  return (data ?? []).map(mapGoal);
+  return rows.map(mapGoal);
 }
 
 /**
  * Get goal with its parent goal (if any)
  */
 export async function getGoalWithParent(
-  supabase: SupabaseClientAny,
   id: string,
   userId: string
 ): Promise<{ goal: Goal; parentGoal: Goal | null } | null> {
-  const goal = await getGoalById(supabase, id, userId);
+  const goal = await getGoalById(id, userId);
   if (!goal) return null;
 
   let parentGoal: Goal | null = null;
   if (goal.parentGoalId) {
-    parentGoal = await getGoalById(supabase, goal.parentGoalId, userId);
+    parentGoal = await getGoalById(goal.parentGoalId, userId);
   }
 
   return { goal, parentGoal };
@@ -293,17 +240,16 @@ export async function getGoalWithParent(
  * Get goal with its child goals
  */
 export async function getGoalWithChildren(
-  supabase: SupabaseClientAny,
   id: string,
   userId: string
 ): Promise<{ goal: Goal; childGoals: Goal[] } | null> {
-  const goal = await getGoalById(supabase, id, userId);
+  const goal = await getGoalById(id, userId);
   if (!goal) return null;
 
   // Only long-term goals can have children
   let childGoals: Goal[] = [];
   if (goal.type === 'long-term') {
-    childGoals = await getChildGoals(supabase, id, userId);
+    childGoals = await getChildGoals(id, userId);
   }
 
   return { goal, childGoals };
@@ -314,13 +260,12 @@ export async function getGoalWithChildren(
  * Returns updated goal or throws GoalLinkValidationError with error code
  */
 export async function linkGoalToParent(
-  supabase: SupabaseClientAny,
   shortTermGoalId: string,
   longTermGoalId: string,
   userId: string
 ): Promise<Goal> {
   // Validate short-term goal exists
-  const shortTermGoal = await getGoalById(supabase, shortTermGoalId, userId);
+  const shortTermGoal = await getGoalById(shortTermGoalId, userId);
   if (!shortTermGoal) {
     throw new GoalLinkValidationError(
       GOAL_LINK_ERROR_CODES.GOAL_NOT_FOUND,
@@ -345,7 +290,7 @@ export async function linkGoalToParent(
   }
 
   // Check if goal has children (cannot be linked as child if it's a parent)
-  const children = await getChildGoals(supabase, shortTermGoalId, userId);
+  const children = await getChildGoals(shortTermGoalId, userId);
   if (children.length > 0) {
     throw new GoalLinkValidationError(
       GOAL_LINK_ERROR_CODES.GOAL_HAS_CHILDREN,
@@ -354,7 +299,7 @@ export async function linkGoalToParent(
   }
 
   // Validate long-term goal exists
-  const longTermGoal = await getGoalById(supabase, longTermGoalId, userId);
+  const longTermGoal = await getGoalById(longTermGoalId, userId);
   if (!longTermGoal) {
     throw new GoalLinkValidationError(
       GOAL_LINK_ERROR_CODES.PARENT_NOT_FOUND,
@@ -371,7 +316,7 @@ export async function linkGoalToParent(
   }
 
   // Update link
-  const updated = await updateGoal(supabase, shortTermGoalId, userId, {
+  const updated = await updateGoal(shortTermGoalId, userId, {
     parentGoalId: longTermGoalId,
   });
 
@@ -389,16 +334,15 @@ export async function linkGoalToParent(
  * Unlink short-term goal from its parent
  */
 export async function unlinkGoalFromParent(
-  supabase: SupabaseClientAny,
   shortTermGoalId: string,
   userId: string
 ): Promise<Goal> {
-  const goal = await getGoalById(supabase, shortTermGoalId, userId);
+  const goal = await getGoalById(shortTermGoalId, userId);
   if (!goal) {
     throw new Error('Goal not found');
   }
 
-  const updated = await updateGoal(supabase, shortTermGoalId, userId, {
+  const updated = await updateGoal(shortTermGoalId, userId, {
     parentGoalId: null,
   });
 
@@ -412,23 +356,20 @@ export async function unlinkGoalFromParent(
 /**
  * Get all long-term goals (for linking dropdown)
  */
-export async function getLongTermGoals(
-  supabase: SupabaseClientAny,
-  userId: string
-): Promise<Goal[]> {
-  const { data, error } = await supabase
-    .from('goals')
-    .select('*')
-    .eq('user_id', userId)
-    .eq('type', 'long-term')
-    .eq('status', 'active')
-    .order('title', { ascending: true });
+export async function getLongTermGoals(userId: string): Promise<Goal[]> {
+  const rows = await db
+    .select()
+    .from(goals)
+    .where(
+      and(
+        eq(goals.userId, userId),
+        eq(goals.type, 'long-term'),
+        eq(goals.status, 'active')
+      )
+    )
+    .orderBy(asc(goals.title));
 
-  if (error) {
-    throw new Error(`Failed to fetch long-term goals: ${error.message}`);
-  }
-
-  return (data ?? []).map(mapGoal);
+  return rows.map(mapGoal);
 }
 
 /**
@@ -436,24 +377,23 @@ export async function getLongTermGoals(
  * Used by dashboard to show goals due in the current week/month
  */
 export async function getGoalsByDeadline(
-  supabase: SupabaseClientAny,
   userId: string,
   startDate: string,
   endDate: string
 ): Promise<Goal[]> {
-  const { data, error } = await supabase
-    .from('goals')
-    .select('*')
-    .eq('user_id', userId)
-    .eq('type', 'short-term')
-    .not('target_date', 'is', null)
-    .gte('target_date', startDate)
-    .lte('target_date', endDate)
-    .order('target_date', { ascending: true });
+  const rows = await db
+    .select()
+    .from(goals)
+    .where(
+      and(
+        eq(goals.userId, userId),
+        eq(goals.type, 'short-term'),
+        isNotNull(goals.targetDate),
+        gte(goals.targetDate, startDate),
+        lte(goals.targetDate, endDate)
+      )
+    )
+    .orderBy(asc(goals.targetDate));
 
-  if (error) {
-    throw new Error(`Failed to fetch goals by deadline: ${error.message}`);
-  }
-
-  return (data ?? []).map(mapGoal);
+  return rows.map(mapGoal);
 }

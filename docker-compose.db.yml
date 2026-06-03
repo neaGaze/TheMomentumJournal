@@ -1,0 +1,35 @@
+# Standalone Postgres — own lifecycle, decoupled from the app.
+# Owns the shared `momentum-net` network and the `momentum-pgdata` volume.
+# Bring this up FIRST, then the app (docker-compose.yml) joins the same network.
+#   docker compose -f docker-compose.db.yml up -d
+#   docker compose -f docker-compose.db.yml down        # add -v to wipe the DB
+services:
+  postgres:
+    image: postgres:16
+    container_name: momentum-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: momentum
+      POSTGRES_PASSWORD: momentum
+      POSTGRES_DB: momentum
+    ports:
+      # localhost-only: never expose Postgres to the internet on a public server.
+      - "127.0.0.1:5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U momentum -d momentum"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    networks:
+      - momentum-net
+
+volumes:
+  pgdata:
+    name: momentum-pgdata
+
+networks:
+  # Explicit name (no compose-project prefix) so the app compose can join it.
+  momentum-net:
+    name: momentum-net

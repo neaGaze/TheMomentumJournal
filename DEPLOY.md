@@ -48,22 +48,23 @@ Notes:
 
 ## 3. Bring up the stack
 
+Postgres and the app run as **two separate compose stacks** sharing the `momentum-net` network. Bring the **DB up first** (it owns the network + volume), load data, then start the app:
+
 ```sh
+# 1. Standalone Postgres (creates momentum-net + momentum-pgdata volume)
+docker compose -f docker-compose.db.yml up -d
+until [ "$(docker inspect -f '{{.State.Health.Status}}' momentum-postgres)" = healthy ]; do sleep 2; done
+
+# 2. Load schema + data — run §4 (cloud import) or §4b (transfer a dump) HERE.
+
+# 3. App (joins momentum-net, connects to momentum-postgres)
 docker compose up -d --build
-docker logs -f momentum-web      # watch app startup
-docker logs -f momentum-postgres # watch DB startup
+docker logs -f momentum-web
 ```
 
-Compose boots `postgres:16` (volume `pgdata`, healthcheck via `pg_isready`), waits until it's healthy, then starts the app. The DB lives in the named volume and survives `docker compose down`; use `docker compose down -v` to wipe it.
+The DB lives in the named volume `momentum-pgdata` and survives `docker compose -f docker-compose.db.yml down`; add `-v` to wipe it. The app stack (`docker compose down`) never touches the DB.
 
-> **⚠ The schema is NOT created automatically.** A fresh `pgdata` volume is empty, and the runtime image doesn't ship `src/` or drizzle-kit, so migrations can't run inside the `web` container. Before the app works you must load the schema (and your data) **first** — via §4 (cloud import) or §4b (transfer an existing DB). Recommended order on a fresh server: bring up Postgres only, load data, *then* the app:
-> ```sh
-> docker compose up -d postgres
-> until [ "$(docker inspect -f '{{.State.Health.Status}}' momentum-postgres)" = healthy ]; do sleep 2; done
-> # ...run §4 or §4b here...
-> docker compose up -d --build        # now start the app
-> ```
-> (If you ever bring up a fresh DB *without* a dump, apply the schema by piping the generated migrations: `cat src/db/migrations/0000_*.sql src/db/migrations/0001_triggers.sql | docker exec -i momentum-postgres psql -U momentum -d momentum`.)
+> **⚠ The schema is NOT created automatically.** A fresh volume is empty, and the runtime image doesn't ship `src/` or drizzle-kit, so migrations can't run inside the `web` container. You must load the schema (and data) in step 2 above — via §4 or §4b — *before* starting the app. If you ever bring up a fresh DB *without* a dump, apply the schema by piping the generated migrations: `cat src/db/migrations/0000_*.sql src/db/migrations/0001_triggers.sql | docker exec -i momentum-postgres psql -U momentum -d momentum`.
 
 Test from another LAN device: `http://<ubuntu-lan-ip>:3000`.
 
@@ -212,13 +213,17 @@ sudo ufw allow OpenSSH && sudo ufw enable
 ## Daily ops
 
 ```sh
-# start
+# start (DB first, then app)
+docker compose -f docker-compose.db.yml up -d
 docker compose up -d
 
-# stop (DB volume preserved)
+# stop app only (DB keeps running)
 docker compose down
 
-# rebuild after code pull
+# stop the DB too (volume preserved; add -v to wipe)
+docker compose -f docker-compose.db.yml down
+
+# rebuild app after code pull
 git pull && docker compose up -d --build
 
 # logs
@@ -228,11 +233,11 @@ docker logs -f momentum-web
 psql "postgres://momentum:momentum@localhost:5432/momentum"
 ```
 
-Auto-start on boot is covered by `restart: unless-stopped` on both services.
+Auto-start on boot is covered by `restart: unless-stopped` on both containers.
 
 ## Backups
 
-The DB is in the `pgdata` Docker volume. Back it up with:
+The DB is in the `momentum-pgdata` Docker volume. Back it up with:
 ```sh
 docker exec momentum-postgres pg_dump -U momentum momentum > backup.sql
 ```

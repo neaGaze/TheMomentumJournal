@@ -1,0 +1,45 @@
+# Local stack: Postgres + Next.js app. No Supabase.
+#   docker compose up -d --build
+#   docker compose down            # add -v to wipe the DB volume
+services:
+  postgres:
+    image: postgres:16
+    container_name: momentum-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: momentum
+      POSTGRES_PASSWORD: momentum
+      POSTGRES_DB: momentum
+    ports:
+      # localhost-only: never expose Postgres to the internet on a public server.
+      - "127.0.0.1:5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U momentum -d momentum"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  web:
+    build: .
+    container_name: momentum-web
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    env_file:
+      - .env.local
+    environment:
+      # Override the localhost DATABASE_URL from .env.local: inside the compose
+      # network the DB is reachable at the `postgres` service hostname.
+      DATABASE_URL: postgres://momentum:momentum@postgres:5432/momentum
+      # Auth.js v5 trusts the reverse-proxy forwarded host/proto (required when
+      # served behind Cloudflare Tunnel / nginx / Caddy, else UntrustedHost).
+      AUTH_TRUST_HOST: "true"
+    ports:
+      # localhost-only: the reverse proxy / tunnel reaches the app here.
+      - "127.0.0.1:3000:3000"
+
+volumes:
+  pgdata:

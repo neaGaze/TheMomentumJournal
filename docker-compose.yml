@@ -17,7 +17,7 @@ services:
       AUTH_TRUST_HOST: "true"
     ports:
       # localhost-only: the reverse proxy / tunnel reaches the app here.
-      - "127.0.0.1:3000:3000"
+      - 3000:3000
     networks:
       - momentum-net
 

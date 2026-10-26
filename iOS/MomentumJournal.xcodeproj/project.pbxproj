@@ -16,7 +16,7 @@
 		A1000001230006 /* MomentumJournal.xcdatamodeld in Sources */ = {isa = PBXBuildFile; fileRef = A1000001130006 /* MomentumJournal.xcdatamodeld */; };
 		A1000001230007 /* Config.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000001130007 /* Config.swift */; };
 		A1000001230008 /* KeychainService.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000001130010 /* KeychainService.swift */; };
-		A1000001230009 /* SupabaseClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000001130011 /* SupabaseClient.swift */; };
+		A1000001230009 /* APIClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000001130011 /* APIClient.swift */; };
 		A1000001230010 /* AuthService.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000001130012 /* AuthService.swift */; };
 		A1000001230011 /* LoginView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000001130013 /* LoginView.swift */; };
 		A1000001230012 /* SignUpView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000001130014 /* SignUpView.swift */; };
@@ -64,7 +64,6 @@
 		A1000001230075 /* Colors.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000001130075 /* Colors.swift */; };
 		A1000001230076 /* Typography.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000001130076 /* Typography.swift */; };
 		A1000001230077 /* FlowLayout.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000001130077 /* FlowLayout.swift */; };
-		A43CD84D2F2491DD0088938D /* Supabase in Frameworks */ = {isa = PBXBuildFile; productRef = A1000001250001 /* Supabase */; };
 		A43CD84E2F2491DD0088938D /* KeychainAccess in Frameworks */ = {isa = PBXBuildFile; productRef = A1000001250002 /* KeychainAccess */; };
 /* End PBXBuildFile section */
 
@@ -80,7 +79,7 @@
 		A1000001130100 /* LaunchScreen.storyboard */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; path = LaunchScreen.storyboard; sourceTree = "<group>"; };
 		A1000001130009 /* MomentumJournal.xcdatamodel */ = {isa = PBXFileReference; lastKnownFileType = wrapper.xcdatamodel; path = MomentumJournal.xcdatamodel; sourceTree = "<group>"; };
 		A1000001130010 /* KeychainService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KeychainService.swift; sourceTree = "<group>"; };
-		A1000001130011 /* SupabaseClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SupabaseClient.swift; sourceTree = "<group>"; };
+		A1000001130011 /* APIClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = APIClient.swift; sourceTree = "<group>"; };
 		A1000001130012 /* AuthService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuthService.swift; sourceTree = "<group>"; };
 		A1000001130013 /* LoginView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LoginView.swift; sourceTree = "<group>"; };
 		A1000001130014 /* SignUpView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SignUpView.swift; sourceTree = "<group>"; };
@@ -136,7 +135,6 @@
 			buildActionMask = 2147483647;
 			files = (
 				A43CD84E2F2491DD0088938D /* KeychainAccess in Frameworks */,
-				A43CD84D2F2491DD0088938D /* Supabase in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -199,7 +197,7 @@
 		A1000001150006 /* Networking */ = {
 			isa = PBXGroup;
 			children = (
-				A1000001130011 /* SupabaseClient.swift */,
+				A1000001130011 /* APIClient.swift */,
 			);
 			path = Networking;
 			sourceTree = "<group>";
@@ -481,7 +479,6 @@
 			);
 			name = MomentumJournal;
 			packageProductDependencies = (
-				A1000001250001 /* Supabase */,
 				A1000001250002 /* KeychainAccess */,
 			);
 			productName = MomentumJournal;
@@ -513,7 +510,6 @@
 			);
 			mainGroup = A1000001150001;
 			packageReferences = (
-				A1000001240001 /* XCRemoteSwiftPackageReference "supabase-swift" */,
 				A1000001240002 /* XCRemoteSwiftPackageReference "KeychainAccess" */,
 			);
 			productRefGroup = A1000001150003 /* Products */;
@@ -549,7 +545,7 @@
 				A1000001230002 /* ContentView.swift in Sources */,
 				A1000001230007 /* Config.swift in Sources */,
 				A1000001230008 /* KeychainService.swift in Sources */,
-				A1000001230009 /* SupabaseClient.swift in Sources */,
+				A1000001230009 /* APIClient.swift in Sources */,
 				A1000001230010 /* AuthService.swift in Sources */,
 				A1000001230011 /* LoginView.swift in Sources */,
 				A1000001230012 /* SignUpView.swift in Sources */,
@@ -806,14 +802,6 @@
 /* End XCConfigurationList section */
 
 /* Begin XCRemoteSwiftPackageReference section */
-		A1000001240001 /* XCRemoteSwiftPackageReference "supabase-swift" */ = {
-			isa = XCRemoteSwiftPackageReference;
-			repositoryURL = "https://github.com/supabase/supabase-swift";
-			requirement = {
-				kind = upToNextMajorVersion;
-				minimumVersion = 2.0.0;
-			};
-		};
 		A1000001240002 /* XCRemoteSwiftPackageReference "KeychainAccess" */ = {
 			isa = XCRemoteSwiftPackageReference;
 			repositoryURL = "https://github.com/kishikawakatsumi/KeychainAccess";
@@ -825,11 +813,6 @@
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
-		A1000001250001 /* Supabase */ = {
-			isa = XCSwiftPackageProductDependency;
-			package = A1000001240001 /* XCRemoteSwiftPackageReference "supabase-swift" */;
-			productName = Supabase;
-		};
 		A1000001250002 /* KeychainAccess */ = {
 			isa = XCSwiftPackageProductDependency;
 			package = A1000001240002 /* XCRemoteSwiftPackageReference "KeychainAccess" */;

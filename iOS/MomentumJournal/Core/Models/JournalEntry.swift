@@ -44,16 +44,17 @@ struct JournalEntry: Codable, Identifiable, Equatable {
 
     enum CodingKeys: String, CodingKey {
         case id
-        case userId = "user_id"
+        case userId
         case title
         case content
-        case entryDate = "entry_date"
+        case entryDate
         case mood
         case tags
-        case createdAt = "created_at"
-        case updatedAt = "updated_at"
-        case lastSyncedAt = "last_synced_at"
-        case linkedGoalIds = "goal_ids"
+        case createdAt
+        case updatedAt
+        case lastSyncedAt
+        case linkedGoalIds = "goalIds"
+        case mentionedGoals
     }
 
     init(
@@ -91,7 +92,12 @@ struct JournalEntry: Codable, Identifiable, Equatable {
         mood = try container.decodeIfPresent(Mood.self, forKey: .mood)
         tags = try container.decodeIfPresent([String].self, forKey: .tags) ?? []
         lastSyncedAt = try container.decodeIfPresent(Date.self, forKey: .lastSyncedAt)
-        linkedGoalIds = try container.decodeIfPresent([UUID].self, forKey: .linkedGoalIds) ?? []
+        // API returns linked goals as `mentionedGoals: Goal[]`
+        if let goals = try? container.decodeIfPresent([Goal].self, forKey: .mentionedGoals) {
+            linkedGoalIds = goals.map(\.id)
+        } else {
+            linkedGoalIds = try container.decodeIfPresent([UUID].self, forKey: .linkedGoalIds) ?? []
+        }
 
         // Handle date decoding (ISO8601 string or Date)
         entryDate = Self.decodeDate(from: container, forKey: .entryDate) ?? Date()
@@ -110,29 +116,8 @@ struct JournalEntry: Codable, Identifiable, Equatable {
             return nil
         }
 
-        // ISO8601 with fractional seconds (Supabase TIMESTAMPTZ format)
-        let formatterWithFractional = ISO8601DateFormatter()
-        formatterWithFractional.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
-        if let date = formatterWithFractional.date(from: dateString) {
-            return date
-        }
-
-        // ISO8601 without fractional seconds
-        let formatter = ISO8601DateFormatter()
-        formatter.formatOptions = [.withInternetDateTime]
-        if let date = formatter.date(from: dateString) {
-            return date
-        }
-
-        // Date-only format (YYYY-MM-DD) for Supabase DATE fields
-        let dateOnlyFormatter = DateFormatter()
-        dateOnlyFormatter.dateFormat = "yyyy-MM-dd"
-        dateOnlyFormatter.timeZone = TimeZone(identifier: "UTC")
-        if let date = dateOnlyFormatter.date(from: dateString) {
-            return date
-        }
-
-        return nil
+        // ISO8601 timestamps or YYYY-MM-DD for DATE columns
+        return APIDate.parse(dateString)
     }
 
     func encode(to encoder: Encoder) throws {
@@ -145,10 +130,7 @@ struct JournalEntry: Codable, Identifiable, Equatable {
         try container.encode(tags, forKey: .tags)
 
         // entry_date is DATE type in DB - use date-only format
-        let dateOnlyFormatter = DateFormatter()
-        dateOnlyFormatter.dateFormat = "yyyy-MM-dd"
-        dateOnlyFormatter.timeZone = TimeZone(identifier: "UTC")
-        try container.encode(dateOnlyFormatter.string(from: entryDate), forKey: .entryDate)
+        try container.encode(APIDate.dateOnlyString(entryDate), forKey: .entryDate)
 
         // created_at and updated_at are TIMESTAMPTZ - use ISO8601
         let formatter = ISO8601DateFormatter()

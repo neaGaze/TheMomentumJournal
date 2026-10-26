@@ -15,6 +15,7 @@ final class KeychainService {
     private enum Keys {
         static let accessToken = "accessToken"
         static let refreshToken = "refreshToken"
+        static let userId = "userId"
     }
 
     private init() {
@@ -49,10 +50,25 @@ final class KeychainService {
         try keychain.remove(Keys.refreshToken)
     }
 
+    // MARK: - User ID
+
+    func saveUserId(_ id: UUID) throws {
+        try keychain.set(id.uuidString, key: Keys.userId)
+    }
+
+    func getUserId() -> UUID? {
+        (try? keychain.get(Keys.userId)).flatMap { $0 }.flatMap(UUID.init(uuidString:))
+    }
+
+    func deleteUserId() throws {
+        try keychain.remove(Keys.userId)
+    }
+
     // MARK: - Convenience
 
     func clearAll() throws {
         try deleteAccessToken()
         try deleteRefreshToken()
+        try deleteUserId()
     }
 }

@@ -45,18 +45,18 @@ struct Goal: Codable, Identifiable, Equatable {
 
     enum CodingKeys: String, CodingKey {
         case id
-        case userId = "user_id"
+        case userId
         case title
         case description
         case type
         case category
-        case targetDate = "target_date"
+        case targetDate
         case status
-        case progressPercentage = "progress_percentage"
-        case parentGoalId = "parent_goal_id"
-        case createdAt = "created_at"
-        case updatedAt = "updated_at"
-        case lastSyncedAt = "last_synced_at"
+        case progressPercentage
+        case parentGoalId
+        case createdAt
+        case updatedAt
+        case lastSyncedAt
     }
 
     // Convenience init for creating new goals
@@ -105,19 +105,19 @@ struct Goal: Codable, Identifiable, Equatable {
 
         // Handle date decoding (ISO8601 string or Date)
         if let dateString = try? container.decode(String.self, forKey: .targetDate) {
-            targetDate = ISO8601DateFormatter().date(from: dateString)
+            targetDate = APIDate.parse(dateString)
         } else {
             targetDate = try container.decodeIfPresent(Date.self, forKey: .targetDate)
         }
 
         if let dateString = try? container.decode(String.self, forKey: .createdAt) {
-            createdAt = ISO8601DateFormatter().date(from: dateString) ?? Date()
+            createdAt = APIDate.parse(dateString) ?? Date()
         } else {
             createdAt = try container.decode(Date.self, forKey: .createdAt)
         }
 
         if let dateString = try? container.decode(String.self, forKey: .updatedAt) {
-            updatedAt = ISO8601DateFormatter().date(from: dateString) ?? Date()
+            updatedAt = APIDate.parse(dateString) ?? Date()
         } else {
             updatedAt = try container.decode(Date.self, forKey: .updatedAt)
         }
@@ -137,7 +137,7 @@ struct Goal: Codable, Identifiable, Equatable {
 
         let formatter = ISO8601DateFormatter()
         if let targetDate = targetDate {
-            try container.encode(formatter.string(from: targetDate), forKey: .targetDate)
+            try container.encode(APIDate.dateOnlyString(targetDate), forKey: .targetDate)
         }
         try container.encode(formatter.string(from: createdAt), forKey: .createdAt)
         try container.encode(formatter.string(from: updatedAt), forKey: .updatedAt)
@@ -157,8 +157,8 @@ struct GoalLinksResponse: Codable {
     let childGoals: [Goal]
 
     enum CodingKeys: String, CodingKey {
-        case parentGoal = "parent_goal"
-        case childGoals = "child_goals"
+        case parentGoal
+        case childGoals
     }
 }
 

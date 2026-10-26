@@ -4,7 +4,6 @@
 //
 
 import Foundation
-import Supabase
 
 @MainActor
 final class GoalFormViewModel: ObservableObject {
@@ -156,12 +155,7 @@ final class GoalFormViewModel: ObservableObject {
     // MARK: - Private
 
     private func getCurrentUserId() async -> UUID? {
-        do {
-            let session = try await SupabaseClientManager.shared.client.auth.session
-            return UUID(uuidString: session.user.id.uuidString)
-        } catch {
-            return nil
-        }
+        AuthService.currentUserId
     }
 }
 

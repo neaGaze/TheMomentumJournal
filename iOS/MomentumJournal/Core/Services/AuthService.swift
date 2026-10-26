@@ -4,20 +4,29 @@
 //
 
 import Foundation
-import Supabase
+
+struct AppUser: Codable, Equatable {
+    let id: UUID
+    let email: String
+    let name: String?
+}
 
 @MainActor
 final class AuthService: ObservableObject {
-    @Published var currentUser: User?
+    @Published var currentUser: AppUser?
     @Published var isAuthenticated = false
     @Published var isLoading = false
     @Published var errorMessage: String?
 
-    private var supabase: SupabaseClient {
-        SupabaseClientManager.shared.client
-    }
+    private let api = APIClient.shared
+    private let keychain = KeychainService.shared
 
     init() {}
+
+    /// Current user ID from Keychain (set on sign in)
+    nonisolated static var currentUserId: UUID? {
+        KeychainService.shared.getUserId()
+    }
 
     // MARK: - Sign In
 
@@ -26,9 +35,9 @@ final class AuthService: ObservableObject {
         errorMessage = nil
 
         do {
-            let session = try await supabase.auth.signIn(email: email, password: password)
-            currentUser = session.user
-            isAuthenticated = true
+            try await login(email: email, password: password)
+        } catch APIError.unauthorized {
+            errorMessage = "Invalid email or password"
         } catch {
             errorMessage = error.localizedDescription
         }
@@ -43,9 +52,18 @@ final class AuthService: ObservableObject {
         errorMessage = nil
 
         do {
-            let response = try await supabase.auth.signUp(email: email, password: password)
-            currentUser = response.user
-            isAuthenticated = true
+            struct RegisterBody: Encodable {
+                let email: String
+                let password: String
+                let fullName: String
+            }
+            let fullName = email.split(separator: "@").first.map(String.init) ?? email
+            let _: Data = try await api.sendRaw(
+                "POST", "api/auth/register",
+                body: RegisterBody(email: email, password: password, fullName: fullName),
+                authorized: false
+            )
+            try await login(email: email, password: password)
         } catch {
             errorMessage = error.localizedDescription
         }
@@ -60,12 +78,12 @@ final class AuthService: ObservableObject {
         errorMessage = nil
 
         do {
-            try await supabase.auth.signOut()
-            currentUser = nil
-            isAuthenticated = false
+            try keychain.clearAll()
         } catch {
             errorMessage = error.localizedDescription
         }
+        currentUser = nil
+        isAuthenticated = false
 
         isLoading = false
     }
@@ -75,16 +93,44 @@ final class AuthService: ObservableObject {
     func restoreSession() async {
         isLoading = true
 
-        do {
-            let session = try await supabase.auth.session
-            currentUser = session.user
+        struct SessionResponse: Decodable {
+            let user: AppUser?
+        }
+
+        if keychain.getAccessToken() != nil,
+           let session: SessionResponse = try? await api.send("GET", "api/auth/session"),
+           let user = session.user {
+            currentUser = user
             isAuthenticated = true
-        } catch {
+        } else {
             // No valid session, user needs to login
             currentUser = nil
             isAuthenticated = false
         }
 
         isLoading = false
+    }
+
+    // MARK: - Private
+
+    private func login(email: String, password: String) async throws {
+        struct LoginBody: Encodable {
+            let email: String
+            let password: String
+        }
+        struct LoginResponse: Decodable {
+            let token: String
+            let user: AppUser
+        }
+
+        let response: LoginResponse = try await api.send(
+            "POST", "api/auth/mobile/login",
+            body: LoginBody(email: email, password: password),
+            authorized: false
+        )
+        try keychain.saveAccessToken(response.token)
+        try keychain.saveUserId(response.user.id)
+        currentUser = response.user
+        isAuthenticated = true
     }
 }

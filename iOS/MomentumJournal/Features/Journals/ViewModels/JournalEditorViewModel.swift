@@ -5,7 +5,6 @@
 
 import Foundation
 import Combine
-import Supabase
 
 @MainActor
 final class JournalEditorViewModel: ObservableObject {
@@ -238,12 +237,7 @@ final class JournalEditorViewModel: ObservableObject {
     // MARK: - Private
 
     private func getCurrentUserId() async -> UUID? {
-        do {
-            let session = try await SupabaseClientManager.shared.client.auth.session
-            return UUID(uuidString: session.user.id.uuidString)
-        } catch {
-            return nil
-        }
+        AuthService.currentUserId
     }
 }
 
